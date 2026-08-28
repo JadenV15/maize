@@ -68,11 +68,12 @@ class VictimType(Enum):
 
 # MAZE:
 
-TILE_WIDTH = 300 # check rules - i think 290?
+TILE_WIDTH = 290
 VICTIM_WIDTH = 50
 
 
 # ROBOT:
+# all coordinates are relative to the robot origin
 
 DEFAULT_SPEED = Speed.SLOW
 
