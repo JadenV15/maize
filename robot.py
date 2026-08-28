@@ -263,6 +263,44 @@ class Robot:
         return self.us_distance > MAX_WALL_DETECTION_DISTANCE
 
 
+    def lookaround(self) -> List[Direction]:
+        """Look to the (relative) north and east and west with the US, and return which of those directions are open (no wall)
+        Instead of naively turning the sensor to each direction in turn, we try to minimise the amount of time / number of moves
+        """
+        directions = []
+
+        # save me some typing. this helper turns to a direction and adds it to the list if its open
+        def add_if_open(d: Direction):
+            self.us_turn_to(d)
+            if self.is_open:
+                directions.append(d)
+
+        # first look to the current direction (no turning required)
+        current = self.us_rel_direction
+        add_if_open(current)
+
+        # visit each of the other two directions in an efficient order
+        if current == Direction.NORTH:
+            add_if_open(Direction.WEST)
+            wait()
+            add_if_open(Direction.EAST)
+
+        elif current == Direction.EAST:
+            add_if_open(Direction.NORTH)
+            wait()
+            add_if_open(Direction.WEST)
+
+        elif current == Direction.WEST:
+            add_if_open(Direction.NORTH)
+            wait()
+            add_if_open(Direction.EAST)
+
+        else:
+            raise Exception
+
+        return directions
+
+
     # colour!
 
 
@@ -270,6 +308,26 @@ class Robot:
     def color(self) -> Color:
         """The current colour at the CS"""
         return self._cs.color # type: ignore
+
+
+    @property
+    def tile_type(self) -> TileType:
+        """What type of tile or victim is under the robot origin based on the color?"""
+        col = self._cs.color
+        # check light reflection first
+        if self._cs.reflected_light_intensity >= REFLECTED_LIGHT_THRESHOLD:
+            return TileType.START
+        elif col == Color.WHITE:
+            return TileType.NORMAL
+        elif col == Color.BLACK:
+            return TileType.NOGO
+        elif col == Color.GREEN:
+            return TileType.UNHARMED_VICTIM
+        elif col == Color.RED:
+            return TileType.HARMED_VICTIM
+        else:
+            # lets hope its just a glitch
+            return TileType.NORMAL
 
 
     # touch sensor

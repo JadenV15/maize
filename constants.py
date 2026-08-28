@@ -53,23 +53,26 @@ class Color(IntEnum):
     BROWN = 7
 
 class TileType(Enum):
-    """Types of tile surfaces. Start: silver reflective tile, Normal: white tile, Black: no-go tile"""
+    """Types of tile surfaces.
+    Start: silver reflective tile
+    Normal: white tile
+    Nogo: black tile
+    Harmed victim: red tile
+    Unharmed victim: green tile
+    """
     START = 0
     NORMAL = 1
-    BLACK = 2
-
-class VictimType(Enum):
-    """Types of victims. None: no victim, Harmed: red square, Unharmed: green square"""
-    NONE = 0
-    HARMED = 1
-    UNHARMED = 2
-
+    NOGO = 2
+    HARMED_VICTIM = 3
+    UNHARMED_VICTIM = 4
 
 
 # MAZE:
 
 TILE_WIDTH = 290
 VICTIM_WIDTH = 50
+
+TILE_HALF_WIDTH = TILE_WIDTH / 2
 
 
 # ROBOT:
@@ -120,3 +123,6 @@ If the detected distance is <= this, then there is a wall in front of the US.
 If the distance is > this, there is open space in front of US.
 '''
 MAX_WALL_DETECTION_DISTANCE = TILE_WIDTH / 2
+
+# used for silver tile detection
+REFLECTED_LIGHT_THRESHOLD = 75

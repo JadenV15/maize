@@ -21,7 +21,6 @@ class Tile:
     """This represents a maze tile. Tiles have the following properties:
     tile_point: a coordinate representing the location of the tile in the tile coordinate system.
     tile_type: an optional TileType representing what tile it is, if known.
-    victim_type: an optional VictimType representing what victim is in the tile, if known.
     visited: a bool flag storing whether the robot has physically been to this tile.
 
     Here is an example of the multiple tile coordinate systems at play:
@@ -56,12 +55,10 @@ class Tile:
 
     tile_type = attr.ib(default=None) # type: Optional[TileType]
 
-    victim_type = attr.ib(default=None) # type: Optional[VictimType]
-
     visited = attr.ib(default=False) # type: bool
 
     if TYPE_CHECKING:
-        def __init__(self, tile_point: Point, tile_type: TileType, visited: bool = False): ...
+        def __init__(self, tile_point: Point, tile_type: Optional[TileType] = None, visited: bool = False): ...
 
 
     @property
@@ -149,7 +146,7 @@ class Edge:
 
 class Map:
     """This is the robot's 'memory'.
-    It can quickly access which tile it's on, and which tiles are open.
+    The robot can quickly access which tile it's on, and which tiles are open.
     When it discovers things (e.g. new tiles, victims), it should update this map.
     """
 
@@ -231,7 +228,7 @@ class Map:
         """Call this when the robot detects that a tile is black.
         We change the tile's `tile_type` to black, and remove all edges (open paths) containing this tile
         """
-        tile.tile_type = TileType.BLACK
+        tile.tile_type = TileType.NOGO
         self._edges = [edge for edge in self._edges if not edge.has(tile)]
 
 
@@ -239,20 +236,20 @@ class Map:
 
 
     @property
-    def statistics(self) -> Dict[Union[TileType, VictimType], int]:
+    def statistics(self) -> Dict[TileType, int]:
         """Get the statistics of the run. Robot should announce this at the end of the solve.
         NOTE: do not access this property during the solve, because some tiles might have incomplete information
         """
         normal_tiles = sum(1 for tile in self._tiles if tile.tile_type == TileType.NORMAL)
-        black_tiles = sum(1 for tile in self._tiles if tile.tile_type == TileType.BLACK)
+        black_tiles = sum(1 for tile in self._tiles if tile.tile_type == TileType.NOGO)
 
-        harmed_victims = sum(1 for tile in self._tiles if tile.victim_type == VictimType.HARMED)
-        unharmed_victims = sum(1 for tile in self._tiles if tile.victim_type == VictimType.UNHARMED)
+        harmed_victims = sum(1 for tile in self._tiles if tile.tile_type == TileType.HARMED_VICTIM)
+        unharmed_victims = sum(1 for tile in self._tiles if tile.tile_type == TileType.UNHARMED_VICTIM)
 
         return {
             TileType.NORMAL: normal_tiles,
-            TileType.BLACK: black_tiles,
-            VictimType.HARMED: harmed_victims,
-            VictimType.UNHARMED: unharmed_victims
+            TileType.NOGO: black_tiles,
+            TileType.HARMED_VICTIM: harmed_victims,
+            TileType.UNHARMED_VICTIM: unharmed_victims
         }
 
