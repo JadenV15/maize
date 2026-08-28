@@ -60,7 +60,7 @@ assert robot.tile_type == TileType.START
 +----(0, 1)-----+
 |               |
 |               |
-|    +--@--+    |
+|    +--@--+    |  next_tile
 |    |     |    |
 |    |     |    |  ↑
 +----|     |----+  ↑
@@ -69,7 +69,7 @@ assert robot.tile_type == TileType.START
 |    |     |    |  ↑
 |    |     |    |  ↑
 |    |     |    |
-+----+--!--+----+
++----+--!--+----+  start_tile
 '''
 
 # define the tile north of the start tile
