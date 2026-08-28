@@ -39,6 +39,7 @@ map.add_tile(start_tile)
 robot = Robot()
 
 # calibrate the robot origin to the actual origin
+# the below var represents '@' in the diagram. We find it by shifting up from '!' by <robot height>
 origin = shift(
     shift(start_tile.origin, Direction.SOUTH, TILE_HALF_WIDTH), # '!' in the above diagram
     Direction.NORTH,
@@ -55,17 +56,24 @@ assert robot.tile_type == TileType.START
 # aim:
 '''
 '@' represents both the robot origin and the tile origin
+'&' represents the old robot origin, from the above diagram
 +----(0, 1)-----+
 |               |
 |               |
 |    +--@--+    |
 |    |     |    |
+|    |     |    |  ↑
++----|     |----+  ↑
+|    +-----+    |  ↑ forward
+|    +--&--+    |  ↑ movement
+|    |     |    |  ↑
+|    |     |    |  ↑
 |    |     |    |
-+----|     |----+
-     +-----+
++----+--!--+----+
 '''
 
 # define the tile north of the start tile
+# which is (0, 1)
 next_tile = Tile(tile_point=Point(0, 1))
 map.add_tile(next_tile)
 map.mark_open(start_tile, next_tile)
