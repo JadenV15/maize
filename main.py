@@ -11,92 +11,110 @@ from robot import Robot
 from map import Tile, Edge, Map
 from move import dfs
 
-# current position:
-'''
-'@' represents the robot origin
-'%' represents the tile origin
-'!' represents the tile south midpoint
-+----(0, 0)-----+  ← tile point written there
-|               |
-|    +--@--+    |
-|    |  %  |    |
-|    |     |    |
-|    |     |    |
-+----+--!--+----+
-'''
 
-map = Map() # hmm, shadowing
+def main():
+    # create the Robot
+    robot = Robot()
+    robot.init()
 
-# add current tile
-start_tile = Tile(
-    tile_point=Point(0, 0), # define the global origin to be at the start tile origin
-    tile_type=TileType.START, # this is a Start tile
-    visited=True # we have 'visited' the start tile
-)
-map.add_tile(start_tile)
+    try:
 
-# create the Robot
-robot = Robot()
+        # current position:
+        '''
+        '@' represents the robot origin
+        '%' represents the tile origin
+        '!' represents the tile south midpoint
+        +----(0, 0)-----+  ← tile point written there
+        |               |
+        |    +--@--+    |
+        |    |  %  |    |
+        |    |     |    |
+        |    |     |    |
+        +----+--!--+----+
+        '''
 
-# calibrate the robot origin to the actual origin
-# the below var represents '@' in the diagram. We find it by shifting up from '!' by <robot height>
-origin = shift(
-    shift(start_tile.origin, Direction.SOUTH, TILE_HALF_WIDTH), # '!' in the above diagram
-    Direction.NORTH,
-    ROBOT_HEIGHT
-)
-robot.origin = origin
+        map = Map() # hmm, shadowing
 
-# assert the current tile is a start tile
-assert robot.tile_type == TileType.START
+        # add current tile
+        start_tile = Tile(
+            tile_point=Point(0, 0), # define the global origin to be at the start tile origin
+            tile_type=TileType.START, # this is a Start tile
+            visited=True # we have 'visited' the start tile
+        )
+        map.add_tile(start_tile)
+
+        # calibrate the robot origin to the actual origin
+        # the below var represents '@' in the diagram. We find it by shifting up from '!' by <robot height>
+        origin = shift(
+            shift(start_tile.origin, Direction.SOUTH, TILE_HALF_WIDTH), # '!' in the above diagram
+            Direction.NORTH,
+            ROBOT_HEIGHT
+        )
+        robot.origin = origin
+
+        # assert the current tile is a start tile
+        assert robot.tile_type == TileType.START
 
 
-# move the robot to the next tile, and centre its origin
-# there is no need to worry about the next tile being black
-# aim:
-'''
-'@' represents both the robot origin and the tile origin
-'&' represents the old robot origin, from the above diagram
-+----(0, 1)-----+
-|               |
-|               |
-|    +--@--+    |  next_tile
-|    |     |    |
-|    |     |    |  ↑
-+----|     |----+  ↑
-|    +-----+    |  ↑ forward
-|    +--&--+    |  ↑ movement
-|    |     |    |  ↑
-|    |     |    |  ↑
-|    |     |    |
-+----+--!--+----+  start_tile
-'''
+        # move the robot to the next tile, and centre its origin
+        # there is no need to worry about the next tile being black
+        # aim:
+        '''
+        '@' represents both the robot origin and the tile origin
+        '&' represents the old robot origin, from the above diagram
+        +----(0, 1)-----+
+        |               |
+        |               |
+        |    +--@--+    |  next_tile
+        |    |     |    |
+        |    |     |    |  ↑
+        +----|     |----+  ↑
+        |    +-----+    |  ↑ forward
+        |    +--&--+    |  ↑ movement
+        |    |     |    |  ↑
+        |    |     |    |  ↑
+        |    |     |    |
+        +----+--!--+----+  start_tile
+        '''
 
-# define the tile north of the start tile
-# which is (0, 1)
-next_tile = Tile(tile_point=Point(0, 1))
-map.add_tile(next_tile)
-map.mark_open(start_tile, next_tile)
+        # define the tile north of the start tile
+        # which is (0, 1)
+        next_tile = Tile(tile_point=Point(0, 1))
+        map.add_tile(next_tile)
+        map.mark_open(start_tile, next_tile)
 
-# move
-delta = origin.distance(next_tile.tile_point) # distance to move forward by
-robot.drive(delta)
-next_tile.visited = True
+        input('Press enter to begin test...')
 
-# add tile type of next_tile
-tile_type = robot.tile_type
-assert tile_type not in (TileType.START, TileType.NOGO)
-next_tile.tile_type = tile_type
+        # move
+        delta = origin.distance(next_tile.tile_point) # distance to move forward by
+        robot.drive(delta)
+        next_tile.visited = True
 
-# at this point we are set up
-wait()
+        # add tile type of next_tile
+        tile_type = robot.tile_type
+        assert tile_type not in (TileType.START, TileType.NOGO)
+        next_tile.tile_type = tile_type
 
-# start exploring from tile (0,1)
-dfs(robot, map, next_tile)
+        # at this point we are set up
+        wait()
 
-wait()
+        # I've put this exit here, because we haven't written `dfs` yet, and I want to test the above code on the robot first
+        raise SystemExit
 
-# finally, move back to the start tile and align against back wall
-robot.drive(delta, forward=False)
+        # start exploring from tile (0,1)
+        dfs(robot, map, next_tile)
 
-#TODO
+        wait()
+
+        # finally, move back to the start tile and align against back wall
+        robot.drive(delta, forward=False)
+
+        #TODO
+
+
+    finally:
+        robot.shutdown()
+
+
+if __name__ == '__main__':
+    main()

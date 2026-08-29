@@ -78,7 +78,7 @@ class Tile:
 
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_detect=True)
 class Edge:
     """This represents an undirected edge between two adjacent tiles.
     a: a Tile
