@@ -86,7 +86,7 @@ def main():
         input('Press enter to begin test...')
 
         # move
-        delta = origin.distance(next_tile.tile_point) # distance to move forward by
+        delta = origin.distance(next_tile.origin) # distance to move forward by
         robot.drive(delta)
         next_tile.visited = True
 
