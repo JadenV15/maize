@@ -87,6 +87,7 @@ def main():
 
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
+        print(delta)
         robot.drive(delta)
         next_tile.visited = True
 
