@@ -89,7 +89,8 @@ def main():
         delta = origin.distance(next_tile.origin) # distance to move forward by
         print(delta)
         robot.drive(delta)
-        next_tile.visited = True
+        #next_tile.visited = True
+        # ^^^ don't do this, as dfs() will mark it as visited
 
         # add tile type of next_tile
         tile_type = robot.tile_type
