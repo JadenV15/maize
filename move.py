@@ -4,7 +4,7 @@ from constants import *
 from utils import *
 
 from robot import Robot
-from map import Tile
+from map import Tile, Edge, Map
 
-def dfs(tile: Tile):
+def dfs(robot: Robot, map: Map, tile: Tile):
     ...

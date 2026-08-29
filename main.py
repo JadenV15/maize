@@ -89,9 +89,12 @@ assert tile_type not in (TileType.START, TileType.NOGO)
 next_tile.tile_type = tile_type
 
 # at this point we are set up
+wait()
 
 # start exploring from tile (0,1)
-dfs(next_tile)
+dfs(robot, map, next_tile)
+
+wait()
 
 # finally, move back to the start tile and align against back wall
 robot.drive(delta, forward=False)
