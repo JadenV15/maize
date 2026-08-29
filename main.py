@@ -9,7 +9,7 @@ from utils import *
 
 from robot import Robot
 from map import Tile, Edge, Map
-
+from move import dfs
 
 # current position:
 '''
@@ -90,17 +90,10 @@ next_tile.tile_type = tile_type
 
 # at this point we are set up
 
-# TODO
+# start exploring from tile (0,1)
+dfs(next_tile)
 
-def advance_robot(a: Tile, b: Tile):
-    ...
-
-def backtrack_robot(a: Tile, b: Tile):
-    ...
-
-def dfs(tile: Tile):
-    assert not tile.visited
-
-
+# finally, move back to the start tile and align against back wall
+robot.drive(delta, forward=False)
 
 #TODO
