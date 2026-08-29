@@ -34,6 +34,10 @@ class Direction(IntEnum):
     SOUTH = 180
     WEST = 270
 
+    def reverse(self) -> 'Direction':
+        """Flip this direction, i.e. add 180deg and cap to [0, 360)"""
+        return type(self)((self + 180) % 360)
+
 class Speed(IntEnum):
     """Different motor speeds, to be used with SpeedPercent"""
     SLOW = 10
