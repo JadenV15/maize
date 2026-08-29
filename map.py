@@ -162,6 +162,12 @@ class Map:
         self._tiles.append(tile)
 
 
+    def add_tiles(self, *tiles: Tile):
+        """Add multiple tiles to the map"""
+        for tile in tiles:
+            self.add_tile(tile)
+
+
     def get_tile(self, tile_point: Point) -> Optional[Tile]:
         """Lookup a tile from its tile coordinate"""
         return next((tile for tile in self._tiles if tile.tile_point == tile_point), None)

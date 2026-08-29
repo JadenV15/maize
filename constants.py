@@ -66,6 +66,15 @@ class TileType(Enum):
     HARMED_VICTIM = 3
     UNHARMED_VICTIM = 4
 
+class MovementType(Enum):
+    """Types of movement, as outline in the doc"""
+    ADVANCE = 0
+    BACKTRACK = 1
+    ADVANCE_LEFT = 2
+    ADVANCE_RIGHT = 3
+    BACKTRACK_LEFT = 4 # opposite of ADVANCE_LEFT
+    BACKTRACK_RIGHT = 5 # opposite of ADVANCE_RIGHT
+
 
 # MAZE:
 
