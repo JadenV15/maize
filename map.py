@@ -120,10 +120,7 @@ class Edge:
         a = self.a
         assert a != b
         assert a.tile_point != b.tile_point
-        assert (
-            (abs(self.a.tile_point.x - self.b.tile_point.x) == 1)
-            != (abs(self.a.tile_point.y - self.b.tile_point.y) == 1)
-        ) # tiles must be adjacent
+        assert a.is_adjacent_to(b)
 
     # this makes `Edge(a, b) == Edge(b, a) work`
     def __eq__(self, other):
