@@ -25,11 +25,11 @@ def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:
     # special cases: avoid trigonometry to avoid small errors like 10.000000001
     if degrees == Direction.NORTH:
         return Point(point.x, point.y + amount)
-    if degrees == Direction.EAST:
+    elif degrees == Direction.EAST:
         return Point(point.x + amount, point.y)
-    if degrees == Direction.SOUTH:
+    elif degrees == Direction.SOUTH:
         return Point(point.x, point.y - amount)
-    if degrees == Direction.WEST:
+    elif degrees == Direction.WEST:
         return Point(point.x - amount, point.y)
     
     rad = math.radians(degrees)
