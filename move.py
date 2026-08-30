@@ -9,10 +9,6 @@ from map import Tile, Edge, Map
 __all__ = ['dfs']
 
 
-def move(current: Tile, target: Tile, relative_direction: Direction):
-    ...
-
-
 def dfs(robot: Robot, map: Map, tile: Tile):
     """Entry point for dfs.
     For the first call, the robot is expected to be in the tile north of the start tile,
