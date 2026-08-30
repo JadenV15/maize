@@ -3,7 +3,7 @@
 from constants import *
 from utils import *
 
-from robot import Robot
+from robot import Robot, BlackTileError
 from map import Tile, Edge, Map
 
 __all__ = ['dfs']
@@ -55,10 +55,50 @@ def dfs(robot: Robot, map: Map, tile: Tile):
         map.add_tile(neighbour)
         map.mark_open(tile, neighbour)
 
-        move(tile, neighbour, rel_direction)
+        # move and explore
+        # basically:
+        #   move_to()
+        #   dfs()
+        #   move_back()
+        # while also handling black tiles (black tile error)
+        
+        try:
+            if rel_direction == Direction.NORTH:
+                robot.advance()
 
-        dfs(robot, map, neighbour)
+                dfs(robot, map, neighbour)
 
-        move(neighbour, tile, rel_direction.reverse())
+                robot.backtrack()
+
+            elif rel_direction == Direction.SOUTH:
+                raise Exception # wtf
+
+            elif rel_direction == Direction.WEST:
+                robot.advance_left()
+
+                dfs(robot, map, neighbour)
+
+                robot.backtrack_left()
+
+            elif rel_direction == Direction.EAST:
+                robot.advance_right()
+
+                dfs(robot, map, neighbour)
+
+                robot.backtrack_right()
+
+        except BlackTileError:
+            # we are back exactly where we started (`tile`)
+
+            # TODO: technically we've 'visited' the black tile
+            # do we use `visited` anywhere important? if so, might need rethink this
+            neighbour.visited = True
+
+            # mark tile as black
+            map.mark_black(neighbour)
+
+            continue
+
+        # TODO - test this, see if i missed anything
 
     
