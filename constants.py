@@ -96,8 +96,8 @@ US_NINETY_DEGREES = 97
 
 # robot movements:
 STEP_2_ROTATION = 35
-STEP_3_DISTANCE = 340
-STEP_5_DISTANCE = 185
+STEP_3_DISTANCE = 340 # diagonal distance
+STEP_5_DISTANCE = 205 # extra distance from half-width. increase this to shorten step 5 distance
 
 
 # ROBOT:
