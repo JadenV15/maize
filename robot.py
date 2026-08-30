@@ -20,6 +20,8 @@ from ev3dev2.sensor.lego import (
 from constants import *
 from utils import *
 
+__all__ = ['Robot']
+
 
 class Robot:
     """Our beloved Robot, built by Shaurya. Provides all basic physical movement"""
@@ -143,7 +145,9 @@ class Robot:
         """
         # EV3 theta is measured CCW from +X (East); we convert it to our
         # heading system, measured CW from North.
-        return max(0, min(360, (90 - math.degrees(self._drive.theta)) % 360))
+        value = (90 - math.degrees(self._drive.theta)) % 360
+        # there was an edge case where smth like 0.00001 % 360 became near 360, causing approx. [0, 360] instead of [0, 360)
+        return 0 if value < 0 or math.isclose(value, 360, abs_tol=0.1) else value
 
 
     @heading.setter
@@ -154,6 +158,20 @@ class Robot:
         # inverse of the above: convert our heading back to EV3 theta.
         assert 0 <= degrees < 360
         self._drive.theta = math.radians((90 - degrees) % 360)
+
+
+    def log(self):
+        print(
+            'Origin: {}\n'
+            'Turning origin: {}\n'
+            'Heading: {}\n'
+            'US Direction: {}\n'.format(
+                self.origin,
+                self.turning_origin,
+                self.heading,
+                self.us_rel_direction,
+            )
+        )
 
 
     # motion
@@ -172,11 +190,18 @@ class Robot:
             delta += 360
         elif clockwise is False and delta > 0:
             delta -= 360
+
+        # account for offset
+        actual_delta = delta * WHEEL_ROTATION_RATIO
+        offset = delta - actual_delta
         
         self._drive.turn_degrees(
             SpeedPercent(speed),
             delta,
         )
+
+        self.heading += offset
+
         # TODO: should we treat the requested angle as the source of truth?
         #self.calibrate_heading(degrees)
 
@@ -188,19 +213,38 @@ class Robot:
         assert degrees >= 0
         # For some reason, turn_degrees accepts negative degrees, not negative speed
         degrees *= 1 if clockwise else -1
-        self._drive.turn_degrees(SpeedPercent(speed), degrees)
+
+        # account for offset
+        actual_degrees = degrees * WHEEL_ROTATION_RATIO
+        offset = degrees - actual_degrees
+
+        self._drive.turn_degrees(SpeedPercent(speed), actual_degrees)
+
+        self.heading += offset
 
 
     def drive(self, distance: Numeric, forward: bool = True, speed: Speed = DEFAULT_SPEED):
         """Drive <forward> by <distance>"""
         assert distance >= 0
+
+        # account for offset
+        # here its easier to just manually take charge of
+        # self._drive.x_pos_mm, self._drive.y_pos_mm
+        current_pos = self.turning_origin
+        delta = distance * (1 if forward else -1)
+        new_pos = shift(current_pos, self.heading, delta)
+
         self._drive.on_for_distance(SpeedPercent((1 if forward else -1) * speed), distance)
+
+        # override the current coordinates
+        self.turning_origin = new_pos
 
 
     @property
     def is_moving(self):
         """Check if the motors are moving normally.
         "moving normally" means running, not stalled, not overloaded
+        NOTE: this DOESN'T WORK (always True) for our robot because the wheels keep spinning after the robot is blocked. Avoid this
         """
         return self._drive.is_running and not self._drive.is_stalled and not self._drive.is_overloaded
 
@@ -342,3 +386,232 @@ class Robot:
         """Get a list of all currently touched points"""
         return [point for point, touch in self._ts_map.values() if touch.is_pressed]
 
+
+
+    # movement
+
+    # NOTE: all drawings are based on movement #4 (turning right) unless specified otherwise
+
+    # This is the example map we are using:
+    '''
+    '@' represents the origin of a tile
+    +----(0, 0)-----+----(1, 0)-----+
+    |               |               |
+    |         ↱   +---------+       |
+    |    +--@--+  |         @       |
+    |    |     |  +---------+       |
+    |    |     | ⤴  |               |
+    +----|     |----+---------------+
+    |    +-----+    |
+    |               |
+    |       @       |
+    |               |
+    |               |
+    +----(0,-1)-----+
+    '''
+
+
+    def _step_1(self, inverse=False):
+        '''
+        1) Move backwards
+        +----(0, 1)-----+
+        |               |
+        |               |
+        |    +--@--+    |  T            T
+        |    |     |    |  |            |
+        |    |     |    |  | backwards  |
+        +----|     |----+  | distance   |
+        |  ↓ +-----+ ↓  |  |            | 1.5x tile height
+        |  ↓ +-----+ ↓  |  +            |
+        |    |  @  |    |  |            |
+        |    |     |    |  | robot height
+        |    |     |    |  |            |
+        +----+--!--+----+  ⊥            ⊥
+        '''
+
+        # estimate
+        distance = TILE_WIDTH + TILE_HALF_WIDTH - ROBOT_HEIGHT
+
+        if not inverse:
+            self.drive(distance, forward=False)
+        else:
+            self.drive(distance)
+
+
+    def _step_2(self, inverse=False):
+        '''
+        2) Rotate to the left
+        +----(0, 1)-----+
+        |               |
+        |               |
+        |       @       |
+        |               |
+        |               |
+        +----(0, 0)-----+
+        |               |
+        |    +-----+    |
+        |   /|  @ /|    |
+        |  / |   / |    |
+        | /  |  /  |    |
+        ++---+-+---+----+
+        ⤶     ⤶
+        '''
+
+        if not inverse:
+            # rotate CLOCKWISE
+            self.turn_by(STEP_2_ROTATION)
+        else:
+            self.turn_by(STEP_2_ROTATION, clockwise=False)
+
+
+    def _step_3(self, inverse=False):
+        '''
+        3) Move forward diagonally
+        +----(0, 1)-----+----(1, 0)-----+
+        |               |               |
+        |               |               |
+        |         +-----+               |
+        |        /     /|               |
+        |       /     / |  ↑            |
+        +------/-----/--+--↑------------+
+        |     +-----+   |  ↑
+        |    +-----+    |  ↑
+        |   /     /     |  ↑
+        |  /     /      |  ↑
+        | /     /       |
+        ++-----+--------+
+        '''
+
+        distance = STEP_3_DISTANCE
+        if not inverse:
+            self.drive(distance)
+        else:
+            self.drive(distance, forward=False)
+
+
+    def _step_4(self, inverse=False):
+        '''
+        4) Rotate to horizontal
+        (closeup diagram)
+        We rotate about the turning origin until the robot is aligned
+        '%' represents the robot origin
+        '$' represents the turning origin (which stays still throughout the rotation)
+        +---------(0, 1)----------+
+        |                         |
+        |                         |
+        |   +------------------+  |
+        |   |           +----%-|--+
+        |===|==========/===$===% /|=======> horizontal centreline
+        |   |         /        |/ |
+        |   +--------/---------+  |
+        |    ↖      /         /   |
+        |      ↖   /         /    |
+        +---------+---------+-----+
+
+        <----------------->$
+        half tile width
+            + adjacent
+        '''
+
+        # calculate based on previous angle
+        angle = 90 - STEP_2_ROTATION
+
+        if not inverse:
+            # turn CLOCKWISE
+            self.turn_by(angle)
+        else:
+            self.turn_by(angle, clockwise=False)
+
+
+    def _step_5(self, inverse=False):
+        '''
+        5) Move forward to next tile's origin
+        +----(0, 0)-----+----(1, 0)-----+
+        |           → → |               |
+        | +---------+ +---------+       |
+    # ← | |     @ $ % |         @       |
+        | +---------+ +---------+       |
+        |           → → |               |
+        +---------------+---------------+
+        |               |
+        |               |
+        |       @       |
+        |               |
+        |               |
+        +----(0,-1)-----+
+        '''
+
+        # origin is labelled '%' in diagram
+        # left wall is labelled '#'
+        origin_disance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
+
+        # distance between origin and desired origin
+        # i.e. distance between '%' and rightmost '@'
+        distance = TILE_WIDTH + TILE_HALF_WIDTH - origin_disance_from_left_wall
+
+        if not inverse:
+            self.drive(distance)
+        else:
+            self.drive(distance, forward=False)
+
+
+    def advance_right(self):
+        """Move forward and to the right.
+        This is movement #4 in the doc.
+        """
+        self._step_1()
+        wait()
+        self._step_2()
+        wait()
+        self._step_3()
+        wait()
+        self._step_4()
+        wait()
+        self._step_5()
+
+
+
+    def advance_left(self):
+        """Move forward and to the left.
+        This is movement #3 in the doc.
+        """
+        self._step_1()
+        wait()
+        self._step_2(inverse=True)
+        wait()
+        self._step_3()
+        wait()
+        self._step_4(inverse=True)
+        wait()
+        self._step_5()
+
+
+
+    def backtrack_right(self):
+        """Move backward and to the right.
+        This is movement #6 in the doc.
+        """
+        self._step_5(inverse=True)
+        wait()
+        self._step_4(inverse=True)
+        wait()
+        self._step_3(inverse=True)
+        wait()
+        self._step_2(inverse=True)
+        wait()
+        self._step_1(inverse=True)
+
+
+    def backtrack_left(self):
+        """Move backward and to the left.
+        This is movement #5 in the doc.
+        """
+        self._step_5(inverse=True)
+        wait()
+        self._step_4()
+        wait()
+        self._step_3(inverse=True)
+        wait()
+        self._step_2()
+        wait()
+        self._step_1(inverse=True)

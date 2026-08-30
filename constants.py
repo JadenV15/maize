@@ -88,6 +88,18 @@ VICTIM_WIDTH = 50
 TILE_HALF_WIDTH = TILE_WIDTH / 2
 
 
+# ROBOT CALIBRATION
+
+WHEEL_ROTATION_RATIO = 1 # what i coded it to rotate divided by what it actually rotated by
+WHEEL_DRIVING_RATIO = 1 # what i coded it to move forward divided by what it actually travelled
+US_NINETY_DEGREES = 97
+
+# robot movements:
+STEP_2_ROTATION = 35
+STEP_3_DISTANCE = 340
+STEP_5_DISTANCE = 195
+
+
 # ROBOT:
 # all coordinates are relative to the robot origin
 
@@ -108,8 +120,6 @@ US_MOTOR_PIN = OUTPUT_C
 US_MOTOR_MIDPOINT = Point(0, -52)
 US_MOTOR_POLARITY = Motor.POLARITY_NORMAL
 US_MOTOR_SPEED = Speed.SLOW
-
-US_NINETY_DEGREES = 97
 
 CS_PIN = INPUT_4
 CS_MIDPOINT = Point(0, 0) # technically 'ctrpoint'
