@@ -423,6 +423,7 @@ class Robot:
 
         if self._is_black:
             self.drive(initial, forward=False)
+            raise BlackTileError
 
         final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
         self.drive(final)
@@ -434,7 +435,7 @@ class Robot:
         NOTE: there is no need to worry about black tiles,
         because we assume both tiles have already been explored
         """
-        self.drive(TILE_WIDTH, forward=True)
+        self.drive(TILE_WIDTH, forward=False)
 
 
     # NOTE: all drawings are based on movement #4 (turning right) unless specified otherwise
