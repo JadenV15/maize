@@ -57,12 +57,12 @@ class Color(IntEnum):
     BROWN = 7
 
 class TileType(Enum):
-    """Types of tile surfaces.
-    Start: silver reflective tile
-    Normal: white tile
-    Nogo: black tile
-    Harmed victim: red tile
-    Unharmed victim: green tile
+    """Types of tile surfaces. These members are all mutually exclusive
+    Start: silver reflective tile (with no victim)
+    Normal: white tile (with no victim)
+    Nogo: black tile (with no victim)
+    Harmed victim: red square (on white tile)
+    Unharmed victim: green square (on white tile)
     """
     START = 0
     NORMAL = 1
@@ -89,10 +89,12 @@ TILE_HALF_WIDTH = TILE_WIDTH / 2
 
 
 # ROBOT CALIBRATION
+# TODO
+
 
 WHEEL_ROTATION_RATIO = 1 # what i coded it to rotate divided by what it actually rotated by
 WHEEL_DRIVING_RATIO = 150 / 142 # what i coded it to move forward divided by what it actually travelled
-US_NINETY_DEGREES = 97
+US_NINETY_DEGREES = 99 # TODO
 
 # robot movements:
 STEP_2_ROTATION = 35
@@ -103,15 +105,17 @@ STEP_5_DISTANCE = 205 # extra distance from half-width. increase this to shorten
 # ROBOT:
 # all coordinates are relative to the robot origin
 
+# TODO: appropriate default speed
 DEFAULT_SPEED = Speed.SLOW
 
+# TODO: finalise measurements
 ROBOT_WIDTH = 135
 ROBOT_HEIGHT = 182
 
 LEFT_WHEEL_PIN = OUTPUT_A
 RIGHT_WHEEL_PIN = OUTPUT_B
 WHEEL_TYPE = EV3Tire
-WHEEL_MIDPOINT_GAP = 98 # measured: 88
+WHEEL_MIDPOINT_GAP = 98 # measured: 88 # TODO
 WHEEL_MIDPOINT_GAP_MIDPOINT = Point(0, -28)
 WHEEL_POLARITY = Motor.POLARITY_NORMAL
 
@@ -144,7 +148,7 @@ DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN = CS_MIDPOINT.distance(WHEEL_MIDPOINT
 If the detected distance is <= this, then there is a wall in front of the US.
 If the distance is > this, there is open space in front of US.
 '''
-MAX_WALL_DETECTION_DISTANCE = TILE_WIDTH / 2
+MAX_WALL_DETECTION_DISTANCE = TILE_HALF_WIDTH
 
 # used for silver tile detection
 REFLECTED_LIGHT_THRESHOLD = 75

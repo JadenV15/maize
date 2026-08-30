@@ -83,8 +83,6 @@ def main():
         map.add_tile(next_tile)
         map.mark_open(start_tile, next_tile)
 
-        input('Press enter to begin test...')
-
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
         print(delta)
@@ -100,7 +98,7 @@ def main():
         # at this point we are set up
         wait()
 
-        # I've put this exit here, because we haven't written `dfs` yet, and I want to test the above code on the robot first
+        # Exit, no dfs - I just want to test above code for now
         raise SystemExit
 
         # start exploring from tile (0,1)
@@ -119,4 +117,6 @@ def main():
 
 
 if __name__ == '__main__':
+    input('Press enter to start...') #TODO :remove
+
     main()
