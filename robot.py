@@ -192,12 +192,12 @@ class Robot:
             delta -= 360
 
         # account for offset
-        actual_delta = delta * WHEEL_ROTATION_RATIO
-        offset = delta - actual_delta
+        corrected_delta = delta * WHEEL_ROTATION_RATIO
+        offset = delta - corrected_delta
         
         self._drive.turn_degrees(
             SpeedPercent(speed),
-            delta,
+            corrected_delta,
         )
 
         self.heading += offset
@@ -215,10 +215,10 @@ class Robot:
         degrees *= 1 if clockwise else -1
 
         # account for offset
-        actual_degrees = degrees * WHEEL_ROTATION_RATIO
-        offset = degrees - actual_degrees
+        corrected_degrees = degrees * WHEEL_ROTATION_RATIO
+        offset = degrees - corrected_degrees
 
-        self._drive.turn_degrees(SpeedPercent(speed), actual_degrees)
+        self._drive.turn_degrees(SpeedPercent(speed), corrected_degrees)
 
         self.heading += offset
 
@@ -234,7 +234,9 @@ class Robot:
         delta = distance * (1 if forward else -1)
         new_pos = shift(current_pos, self.heading, delta)
 
-        self._drive.on_for_distance(SpeedPercent((1 if forward else -1) * speed), distance)
+        # account for offset
+        corrected_distance = distance * WHEEL_DRIVING_RATIO
+        self._drive.on_for_distance(SpeedPercent((1 if forward else -1) * speed), corrected_distance)
 
         # override the current coordinates
         self.turning_origin = new_pos

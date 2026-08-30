@@ -91,7 +91,7 @@ TILE_HALF_WIDTH = TILE_WIDTH / 2
 # ROBOT CALIBRATION
 
 WHEEL_ROTATION_RATIO = 1 # what i coded it to rotate divided by what it actually rotated by
-WHEEL_DRIVING_RATIO = 1 # what i coded it to move forward divided by what it actually travelled
+WHEEL_DRIVING_RATIO = 150 / 142 # what i coded it to move forward divided by what it actually travelled
 US_NINETY_DEGREES = 97
 
 # robot movements:
