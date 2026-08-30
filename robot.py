@@ -387,7 +387,6 @@ class Robot:
         return [point for point, touch in self._ts_map.values() if touch.is_pressed]
 
 
-
     # movement
 
     # NOTE: all drawings are based on movement #4 (turning right) unless specified otherwise
@@ -570,7 +569,6 @@ class Robot:
         self._step_5()
 
 
-
     def advance_left(self):
         """Move forward and to the left.
         This is movement #3 in the doc.
@@ -584,7 +582,6 @@ class Robot:
         self._step_4(inverse=True)
         wait()
         self._step_5()
-
 
 
     def backtrack_right(self):
@@ -615,3 +612,7 @@ class Robot:
         self._step_2()
         wait()
         self._step_1(inverse=True)
+
+
+
+
