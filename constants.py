@@ -35,7 +35,7 @@ class Direction(IntEnum):
     WEST = 270
 
     def reverse(self) -> 'Direction':
-        """Flip this direction, i.e. add 180deg and cap to [0, 360)"""
+        """Flip this direction, i.e. add 180deg and wrap to [0, 360)"""
         return type(self)((self + 180) % 360)
 
 class Speed(IntEnum):
@@ -100,6 +100,8 @@ US_NINETY_DEGREES = 99 # TODO
 STEP_2_ROTATION = 35
 STEP_3_DISTANCE = 340 # diagonal distance
 STEP_5_DISTANCE = 205 # extra distance from half-width. increase this to shorten step 5 distance
+STEP_5_A_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see docstring. either 1/2 or 1/3, I think.
+ADVANCE_MVT_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see robot.advance(). similar to above
 
 
 # ROBOT:

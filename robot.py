@@ -20,7 +20,15 @@ from ev3dev2.sensor.lego import (
 from constants import *
 from utils import *
 
-__all__ = ['Robot']
+__all__ = ['Robot', 'BlackTileError']
+
+
+
+class BlackTileError(Exception):
+    """The robot has detected a black tile while executing a MovementType.
+    The robot has moved back to the last position.
+    """
+    pass
 
 
 class Robot:
@@ -391,6 +399,44 @@ class Robot:
 
     # movement
 
+
+    @property
+    def _is_black(self) -> bool:
+        """Is the tile under the CS black?
+        This is just to save me some typing when writing the movements
+        """
+        return self.tile_type == TileType.NOGO
+
+
+    # first, the simple ones
+
+
+    def advance(self):
+        """Move forward.
+        This is movement #1 in the doc.
+        Raise black tile error and return to original position if black tile detected.
+        See step_5_a docstring for more info
+        """
+        initial = TILE_HALF_WIDTH + ADVANCE_MVT_DISTANCE
+        self.drive(initial)
+        wait()
+
+        if self._is_black:
+            self.drive(initial, forward=False)
+
+        final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
+        self.drive(final)
+
+
+    def backtrack(self):
+        """Move backward.
+        This is movement #2 in the doc.
+        NOTE: there is no need to worry about black tiles,
+        because we assume both tiles have already been explored
+        """
+        self.drive(TILE_WIDTH, forward=True)
+
+
     # NOTE: all drawings are based on movement #4 (turning right) unless specified otherwise
 
     # This is the example map we are using:
@@ -527,6 +573,7 @@ class Robot:
     def _step_5(self, inverse=False):
         '''
         5) Move forward to next tile's origin
+        '#' represents the left wall
         +----(0, 0)-----+----(1, 0)-----+
         |           → → |               |
         | +---------+ +---------+       |
@@ -543,13 +590,55 @@ class Robot:
         '''
 
         # origin is labelled '%' in diagram
-        # left wall is labelled '#'
-        origin_disance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
+        origin_distance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
 
         # distance between origin and desired origin
         # i.e. distance between '%' and rightmost '@'
-        distance = TILE_WIDTH + TILE_HALF_WIDTH - origin_disance_from_left_wall
+        distance = TILE_WIDTH + TILE_HALF_WIDTH - origin_distance_from_left_wall
 
+        if not inverse:
+            self.drive(distance)
+        else:
+            self.drive(distance, forward=False)
+
+
+    # if we split _step_5 into two forward movements, we get _step_5_a and _step_5_b.
+    # use the latter two if we need to check for black tile after step_5_a (or b, if inverse)
+
+
+    def _step_5_a(self, inverse=False):
+        """(when inverse=False) Move just enough to bring the CS onto the tile, to check whether it's black
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |       |       |
+        | +-----+---+-----+     |       |
+        | |     |   |   | |     |       |
+        | +-----+---+-----+     |       |
+        | <--------->   |       |       |
+        +------ <---------> ----|-------+
+               → → → →        centre
+
+        Relevant closeup of position after calling this function:
+        +-------|-+     |       |
+        |       | |     |       |
+        +-------|-+     |       |
+                <=>
+            this length
+           is in constants.py
+        Too small, and you risk not getting into tile (1, 0) at all
+        Too big, and you risk getting more than 50% the robot into tile (1, 0), which is not good according to the rules
+        """
+        origin_distance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
+        distance = TILE_WIDTH + STEP_5_A_DISTANCE - origin_distance_from_left_wall
+
+        if not inverse:
+            self.drive(distance)
+        else:
+            self.drive(distance, forward=False)
+
+
+    def _step_5_b(self, inverse=False):
+        """See previous docstrings. (when inverse=False) This drives the remaining distance to next tile's origin"""
+        distance = TILE_HALF_WIDTH - STEP_5_A_DISTANCE
         if not inverse:
             self.drive(distance)
         else:
@@ -559,6 +648,7 @@ class Robot:
     def advance_right(self):
         """Move forward and to the right.
         This is movement #4 in the doc.
+        Raise black tile error and return to original position if black tile detected.
         """
         self._step_1()
         wait()
@@ -566,14 +656,53 @@ class Robot:
         wait()
         self._step_3()
         wait()
+
+        if self._is_black:
+            # do everything backwards to return to initial position
+            self._step_3(inverse=True)
+            wait()
+            self._step_2(inverse=True)
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
         self._step_4()
         wait()
-        self._step_5()
+
+        if self._is_black:
+            # do everything backwards to return to initial position
+            self._step_4(inverse=True)
+            wait()
+            self._step_3(inverse=True)
+            wait()
+            self._step_2(inverse=True)
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
+        self._step_5_a()
+        wait()
+
+        if self._is_black:
+            # do everything backwards to return to initial position
+            self._step_5_a(inverse=True)
+            wait()
+            self._step_4(inverse=True)
+            wait()
+            self._step_3(inverse=True)
+            wait()
+            self._step_2(inverse=True)
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
+        self._step_5_b()
 
 
     def advance_left(self):
         """Move forward and to the left.
         This is movement #3 in the doc.
+        Raise black tile error and return to original position if black tile detected.
         """
         self._step_1()
         wait()
@@ -581,14 +710,51 @@ class Robot:
         wait()
         self._step_3()
         wait()
+
+        if self._is_black:
+            self._step_3(inverse=True)
+            wait()
+            self._step_2()
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
         self._step_4(inverse=True)
         wait()
-        self._step_5()
+
+        if self._is_black:
+            self._step_4()
+            wait()
+            self._step_3(inverse=True)
+            wait()
+            self._step_2()
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
+        self._step_5_a()
+        wait()
+
+        if self._is_black:
+            self._step_5_a(inverse=True)
+            wait()
+            self._step_4()
+            wait()
+            self._step_3(inverse=True)
+            wait()
+            self._step_2()
+            wait()
+            self._step_1(inverse=True)
+            raise BlackTileError
+
+        self._step_5_b()
 
 
     def backtrack_right(self):
         """Move backward and to the right.
         This is movement #6 in the doc.
+        NOTE: there is no need to worry about black tiles,
+        because we assume all three tiles have already been explored
         """
         self._step_5(inverse=True)
         wait()
@@ -604,6 +770,8 @@ class Robot:
     def backtrack_left(self):
         """Move backward and to the left.
         This is movement #5 in the doc.
+        NOTE: there is no need to worry about black tiles,
+        because we assume all three tiles have already been explored
         """
         self._step_5(inverse=True)
         wait()
@@ -614,7 +782,5 @@ class Robot:
         self._step_2()
         wait()
         self._step_1(inverse=True)
-
-
 
 
