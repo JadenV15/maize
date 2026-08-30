@@ -80,6 +80,10 @@ class MovementType(Enum):
     BACKTRACK_RIGHT = 5 # opposite of ADVANCE_RIGHT
 
 
+# SLEEP
+WAIT_TIME_MS = 300
+
+
 # MAZE:
 
 TILE_WIDTH = 290

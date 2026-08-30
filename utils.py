@@ -5,7 +5,7 @@ import time
 
 from shapely.geometry import Point
 
-from constants import Numeric, Direction
+from constants import Numeric, Direction, WAIT_TIME_MS
 
 __all__ = [
     'wait',
@@ -16,7 +16,7 @@ __all__ = [
 
 def wait():
     """Sleep a short amount of time between movements, to prevent jamming"""
-    time.sleep(400 / 1000)
+    time.sleep(WAIT_TIME_MS / 1000)
 
 
 def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:
