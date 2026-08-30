@@ -44,7 +44,7 @@ def dfs(robot: Robot, map: Map, tile: Tile):
         neighbour = map.get_tile_by_direction(tile, global_direction)
 
         # check if already visited
-        if neighbour is not None and neighbour.visited:
+        if neighbour is not None: # and neighbour.visited: # technically redundant
             continue # next
 
         neighbour = Tile(tile_point=shift(
