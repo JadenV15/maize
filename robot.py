@@ -719,6 +719,7 @@ class Robot:
             self._step_1(inverse=True)
             raise BlackTileError
 
+        # TODO: technically, if we rotate and find a black tile, we're not aloud to rotate back out of it.
         self._step_4(inverse=True)
         wait()
 
