@@ -31,7 +31,7 @@ class Solver:
         # self._current_tile: Tile
 
 
-    def solve(self, test_initial: bool = False, test_without_calibration: bool = False):
+    def solve(self, test_initial_only: bool = False, test_without_calibration: bool = False):
         """Main entry point"""
         # current position:
         '''
@@ -109,7 +109,7 @@ class Solver:
         # at this point we are set up
         wait()
 
-        if test_initial:
+        if test_initial_only:
             # Exit, no dfs - I just want to test above code for now
             raise SystemExit
 
@@ -296,7 +296,7 @@ class Solver:
 
         if self._calibrate:
             # TODO - THIS IS EXPERIMENTAL
-            
+
             global_direction = Direction.from_heading(self._robot.heading)
             next_tile = self._map.get_tile_by_direction(
                 self._current_tile,
