@@ -7,6 +7,9 @@ from robot import Robot
 from map import Tile, Map
 from solver import Solver
 
+import button
+import indicate
+
 __all__ = ['RobotTester', 'SolverTester']
 
 
@@ -222,7 +225,7 @@ if __name__ == '__main__':
         solvetest = SolverTester(solver)
 
         # globals:
-        # robot, robtest, map, solver, solvetest
+        # robot, robtest, map, solver, solvetest, button, indicate
 
         while True:
             string = input('Enter expr (or nothing to exit): ')

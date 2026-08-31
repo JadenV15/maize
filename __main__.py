@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Main entry point. This performs the 30-second imports, then stands by"""
+"""Main entry point. This performs the slow imports, then stands by"""
 
 import time
 
