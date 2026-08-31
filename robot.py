@@ -369,6 +369,8 @@ class Robot:
         else:
             raise Exception
 
+        # TODO: do we restore to NORTH?
+
         return directions
 
 
