@@ -28,7 +28,6 @@ class Tester:
         self._robot.origin = Point(0, 0)
 
 
-
     # basic tests - can the robot do these things?
 
 
@@ -100,7 +99,7 @@ class Tester:
     # calibration tests
 
 
-
+    #TODO
 
 
 if __name__ == '__main__':
