@@ -255,13 +255,19 @@ class Solver:
         return self._robot.tile_type == TileType.NOGO
 
 
-    def drive_until_us_stable(self, calibrate_origin: Optional[Point] = None, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+    # i actually hate this style of indentation
+    def drive_until_us_stable(self,
+                              min_distance: Optional[Numeric] = None,
+                              calibrate_origin: Optional[Point] = None,
+                              forward: bool = True,
+                              speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Keep driving until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE). Then calibrate the robot origin to <calibrate_origin>
         Use this to drive until hit wall
         NOTE: US must be facing a wall (and the wall must be within range) for this to work
         """
-        # TODO: for now don't call this with min_distance / max_distance, because this could mask bugs
-        initial_pos = self._robot.turning_origin
+        # TODO: for now don't call this with min_distance, because this could mask bugs
+
+        initial_pos = self._robot.origin
         last_reading = self._robot.us_distance
 
         # start driving
@@ -270,7 +276,7 @@ class Solver:
                 wait(DRIVE_WALL_POLL_INTERVAL_MS)
 
                 # check if distance limit reached
-                distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
+                distance = initial_pos.distance(self._robot.origin) / WHEEL_DRIVING_RATIO
                 if distance >= DRIVE_WALL_MAX_DISTANCE:
                     break
 
@@ -280,7 +286,15 @@ class Solver:
                     break
                 last_reading = current_reading
 
+        if min_distance is not None:
+            distance = initial_pos.distance(self._robot.origin) / WHEEL_DRIVING_RATIO
+            delta = min_distance - distance
+            if delta > 0:
+                # we are less than min_distance
+                self._robot.drive(delta, forward, speed)
+
         # extra distance (robot is already at the wall, this just hopefully corrects the heading by ramming against the wall)
+        # no need to do wait() because we are driving in one direction near-continuously
         self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward, speed)
 
         # right now the odometry is all messed up
@@ -299,6 +313,23 @@ class Solver:
         This is movement #1 in the doc.
         Raise black tile error and return to original position if black tile detected.
         See step_5_a docstring for more info
+        Diagram:
+        '@' represents tile origin (and here, also robot origin)
+        +--wall----+
+        |          |
+        | +--@--+  | current_tile
+        | |     |  |
+        +-|-----|--+ ↑
+        | |_____|  | ↑
+        | +--@--+  | ↑ self._current_tile
+        | |     |  | ↑
+        +-|-----|--+ ↑
+        | |_____|  |
+        |          |
+        |          |
+        +----------+
+        If 'wall' exists, move up to it then back, to calibrate
+        TODO: is there enough time to calibrate?
         """
         initial = TILE_HALF_WIDTH + ADVANCE_MVT_DISTANCE
         self._robot.drive(initial)
@@ -359,6 +390,8 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume both tiles have already been explored
         """
+        # NO CALIBRATION - TODO?
+
         self._robot.drive(TILE_WIDTH, forward=False)
 
 
@@ -453,6 +486,10 @@ class Solver:
         | /     /       |
         ++-----+--------+
         '''
+        # TODO: to avoid snagging the US on the sensor
+        # we rotate it rel North
+        # but is this necessary?
+        self._robot.us_turn_to(Direction.NORTH)
 
         distance = STEP_3_DISTANCE
         if not inverse:

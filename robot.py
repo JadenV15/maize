@@ -232,7 +232,7 @@ class Robot:
         # account for correction
         # here its easier to just manually take charge of
         # self._drive.x_pos_mm, self._drive.y_pos_mm
-        current_pos = self.turning_origin
+        current_pos = self.origin
         delta = distance * (1 if forward else -1)
         new_pos = shift(current_pos, self.heading, delta)
 
@@ -241,14 +241,14 @@ class Robot:
         self._drive.on_for_distance(SpeedPercent((1 if forward else -1) * speed), corrected_distance)
 
         # override the current coordinates
-        self.turning_origin = new_pos
+        self.origin = new_pos
 
 
     @contextmanager
     def driving(self, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Start driving <forward> at <speed>"""
         # account for correction
-        initial_pos = self.turning_origin
+        initial_pos = self.origin
 
         motor_speed = SpeedPercent((1 if forward else -1) * speed)
         self._drive.on(motor_speed, motor_speed)
@@ -259,11 +259,11 @@ class Robot:
             self._drive.off()
 
             # account for correction
-            distance = initial_pos.distance(self.turning_origin)
+            distance = initial_pos.distance(self.origin)
             actual_distance = distance / WHEEL_DRIVING_RATIO
 
             new_pos = shift(initial_pos, self.heading, actual_distance)
-            self.turning_origin = new_pos
+            self.origin = new_pos
 
 
     @property
