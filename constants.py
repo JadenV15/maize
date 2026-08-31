@@ -38,6 +38,16 @@ class Direction(IntEnum):
         """Flip this direction, i.e. add 180deg and wrap to [0, 360)"""
         return type(self)((self + 180) % 360)
 
+    @classmethod
+    def from_heading(cls, degrees: Numeric) -> 'Direction':
+        """Convert a heading to *nearest* direction"""
+        assert 0 <= degrees < 360
+        # cool: min takes any iterable, including enums
+        return min(
+            cls,
+            key=lambda direction: abs((degrees - direction + 180) % 360 - 180)
+        )
+
 class Speed(IntEnum):
     """Different motor speeds, to be used with SpeedPercent"""
     SLOW = 10
