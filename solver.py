@@ -267,17 +267,17 @@ class Solver:
         """
         # TODO: for now don't call this with min_distance, because this could mask bugs
 
-        initial_pos = self._robot.origin
         last_reading = self._robot.us_distance
 
         # start driving
-        with self._robot.driving(forward, speed):
+        with self._robot.driving(forward, speed) as distance:
+            wait(DRIVE_WALL_POLL_INTERVAL_MS) # TODO - just in case the motors don't start immediately
+
             while True:
                 wait(DRIVE_WALL_POLL_INTERVAL_MS)
 
                 # check if distance limit reached
-                distance = initial_pos.distance(self._robot.origin) / WHEEL_DRIVING_RATIO
-                if distance >= DRIVE_WALL_MAX_DISTANCE:
+                if distance.value >= DRIVE_WALL_MAX_DISTANCE:
                     break
 
                 # check if US reading is stable
@@ -287,8 +287,7 @@ class Solver:
                 last_reading = current_reading
 
         if min_distance is not None:
-            distance = initial_pos.distance(self._robot.origin) / WHEEL_DRIVING_RATIO
-            delta = min_distance - distance
+            delta = min_distance - distance.value
             if delta > 0:
                 # we are less than min_distance
                 self._robot.drive(delta, forward, speed)

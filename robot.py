@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 import math
-from typing import List, Optional, Union
+from typing import Iterator, List, Optional, Union, Callable
 
 from shapely.geometry import Point
 
@@ -21,8 +21,17 @@ from ev3dev2.sensor.lego import (
 from constants import *
 from utils import *
 
-__all__ = ['Robot']
+__all__ = ['Robot', 'Value']
 
+
+
+class Value:
+    def __init__(self, callback: Callable[[], Numeric]):
+        self._callback = callback
+
+    @property
+    def value(self) -> Numeric:
+        return self._callback()
 
 
 class Robot:
@@ -245,24 +254,26 @@ class Robot:
 
 
     @contextmanager
-    def driving(self, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+    def driving(self, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED) -> Iterator[Value]:
         """Start driving <forward> at <speed>"""
         # account for correction
         initial_pos = self.origin
+
+        # allow polling the value
+        def get_abs_distance():
+            return initial_pos.distance(self.origin) / WHEEL_DRIVING_RATIO
+        value = Value(get_abs_distance)
 
         motor_speed = SpeedPercent((1 if forward else -1) * speed)
         self._drive.on(motor_speed, motor_speed)
 
         try:
-            yield
+            yield value
         finally:
             self._drive.off()
 
             # account for correction
-            distance = initial_pos.distance(self.origin)
-            actual_distance = distance / WHEEL_DRIVING_RATIO
-
-            new_pos = shift(initial_pos, self.heading, actual_distance)
+            new_pos = shift(initial_pos, self.heading, value.value)
             self.origin = new_pos
 
 

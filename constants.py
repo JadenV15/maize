@@ -174,6 +174,7 @@ RIGHT_TS_ENDPOINT = Point(ROBOT_WIDTH / 2, - ROBOT_HEIGHT + 28)
 DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN = CS_MIDPOINT.distance(WHEEL_MIDPOINT_GAP_MIDPOINT)
 
 # used for wall detection
+MAX_WALL_DETECTION_DISTANCE = TILE_HALF_WIDTH + 30 # TODO - added a buffer
 '''
 |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾|   T
 |               |   | ← this distance
@@ -186,7 +187,6 @@ DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN = CS_MIDPOINT.distance(WHEEL_MIDPOINT
 If the detected distance is <= this, then there is a wall in front of the US.
 If the distance is > this, there is open space in front of US.
 '''
-MAX_WALL_DETECTION_DISTANCE = TILE_HALF_WIDTH
 
 # used for silver tile detection
 REFLECTED_LIGHT_THRESHOLD = 75
