@@ -30,7 +30,7 @@ def dfs(robot: Robot, map: Map, tile: Tile):
     tile.tile_type = tile_type
 
     # scan open directions
-    open_directions = robot.lookaround()
+    open_directions = robot.lookaround() # this acts like wait() because it takes some time
 
     for rel_direction in open_directions:
         # NOTE: this direction is RELATIVE. we need to convert it to a GLOBAL on.
@@ -65,6 +65,7 @@ def dfs(robot: Robot, map: Map, tile: Tile):
                 dfs(robot, map, neighbour)
 
                 robot.backtrack()
+                wait()
 
             elif rel_direction == Direction.SOUTH:
                 raise Exception # wtf
@@ -75,6 +76,7 @@ def dfs(robot: Robot, map: Map, tile: Tile):
                 dfs(robot, map, neighbour)
 
                 robot.backtrack_left()
+                wait()
 
             elif rel_direction == Direction.EAST:
                 robot.advance_right()
@@ -82,6 +84,7 @@ def dfs(robot: Robot, map: Map, tile: Tile):
                 dfs(robot, map, neighbour)
 
                 robot.backtrack_right()
+                wait()
 
         except BlackTileError:
             # we are back exactly where we started (`tile`)
