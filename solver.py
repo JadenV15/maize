@@ -135,6 +135,7 @@ class Solver:
         self._robot.drive(delta, forward=False)
 
         indicate_finish()
+        indicate_final_counts(self._map.statistics)
 
 
     # dfs

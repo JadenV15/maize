@@ -248,7 +248,7 @@ class Map:
         self._edges = [edge for edge in self._edges if not edge.has(tile)]
 
 
-    # statistics, TODO
+    # statistics
 
 
     @property
@@ -256,16 +256,14 @@ class Map:
         """Get the statistics of the run. Robot should announce this at the end of the solve.
         NOTE: do not access this property during the solve, because some tiles might have incomplete information
         """
-        normal_tiles = sum(1 for tile in self._tiles if tile.tile_type == TileType.NORMAL)
-        black_tiles = sum(1 for tile in self._tiles if tile.tile_type == TileType.NOGO)
+        stats = dict.fromkeys(TileType, 0) # fromkeys - very neat
 
-        harmed_victims = sum(1 for tile in self._tiles if tile.tile_type == TileType.HARMED_VICTIM)
-        unharmed_victims = sum(1 for tile in self._tiles if tile.tile_type == TileType.UNHARMED_VICTIM)
+        for tile in self._tiles:
+            # every tile *should* have a tiletype by now
+            if tile.tile_type is None: continue
 
-        return {
-            TileType.NORMAL: normal_tiles,
-            TileType.NOGO: black_tiles,
-            TileType.HARMED_VICTIM: harmed_victims,
-            TileType.UNHARMED_VICTIM: unharmed_victims
-        }
+            stats[tile.tile_type] += 1
+
+        return stats
+
 
