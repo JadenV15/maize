@@ -27,6 +27,7 @@ while True:
         main()
     except ExitRequestedError:
         print('Stopped')
+        reset_backspace()
         continue # wait for Robot Handler to press enter again to restart
     except Exception as e:
         print('Error:')
