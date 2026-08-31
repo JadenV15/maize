@@ -43,15 +43,13 @@ class Solver:
         +----+--!--+----+
         '''
 
-        map = Map() # hmm, shadowing
-
         # add current tile
         start_tile = Tile(
             tile_point=Point(0, 0), # define the global origin to be at the start tile origin
             tile_type=TileType.START, # this is a Start tile
             visited=True # we have 'visited' the start tile
         )
-        map.add_tile(start_tile)
+        self._map.add_tile(start_tile)
 
         # calibrate the robot origin to the actual origin
         # the below var represents '@' in the diagram. We find it by shifting up from '!' by <robot height>
@@ -90,8 +88,8 @@ class Solver:
         # define the tile north of the start tile
         # which is (0, 1)
         next_tile = Tile(tile_point=Point(0, 1))
-        map.add_tile(next_tile)
-        map.mark_open(start_tile, next_tile)
+        self._map.add_tile(next_tile)
+        self._map.mark_open(start_tile, next_tile)
 
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
@@ -139,6 +137,10 @@ class Solver:
         This func is called recursively.
         NOTE: <tile> always refers to the tile the robot is ON, NOT the one it's GOING TO.
         """
+        # note: the assumption is that
+        # right now, the robot's origin is EXACTLY (i.e. has been calibrated)
+        # on the current tile's origin
+
         # this tile should have been assigned as current
         assert self._current_tile is tile
         
