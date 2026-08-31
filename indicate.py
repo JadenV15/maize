@@ -5,6 +5,11 @@ from typing import Dict
 from constants import TileType
 
 
+def indicate_fuck_up():
+    """Indicate (with a bunch of flashing lights and sounds) that the robot has been FUBAR"""
+    print('something went wrong')
+    ...
+
 def indicate_start():
     """Pause for 1 second, indicating that the robot is starting"""
     print('start')

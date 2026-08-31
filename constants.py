@@ -25,6 +25,12 @@ from ev3dev2.sensor import (
 Numeric = Union[int, float] # type hint any number
 
 
+# exc
+class ExitRequestedError(Exception):
+    """The Robot Handler has pressed a button requesting to terminate the program"""
+    pass
+
+
 # enums
 
 class Direction(IntEnum):

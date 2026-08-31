@@ -5,7 +5,8 @@ import time
 
 from shapely.geometry import Point
 
-from constants import Numeric, Direction, WAIT_TIME_MS
+from constants import *
+from button import is_backspace_pressed
 
 __all__ = [
     'wait',
@@ -14,8 +15,11 @@ __all__ = [
 
 
 def wait(time_ms: Numeric = WAIT_TIME_MS):
-    """Sleep a short amount of time between movements, to prevent jamming"""
+    """Sleep a short amount of time between movements, to prevent jamming. Also check if exit requested (via button press)"""
     time.sleep(time_ms / 1000)
+
+    if is_backspace_pressed():
+        raise ExitRequestedError
 
 
 def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:
