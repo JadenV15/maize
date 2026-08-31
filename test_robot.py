@@ -4,8 +4,13 @@ from constants import *
 from utils import *
 
 from robot import Robot
+from map import Tile, Map
+from solver import Solver
 
-class Tester:
+__all__ = ['RobotTester', 'SolverTester']
+
+
+class RobotTester:
     def __init__(self, robot: Robot):
         self._robot = robot
 
@@ -102,6 +107,85 @@ class Tester:
     #TODO
 
 
+class SolverTester:
+    def __init__(self, solver: Solver):
+        self._solver = solver
+        self._robot = solver._robot
+        self._map = solver._map
+
+
+    def calibrate_to_direction(self, direction: Direction):
+        self._robot.heading = direction
+
+
+    def calibrate_to_north(self):
+        self._robot.heading = 0
+
+
+    def calibrate_to_tile_point(self, tile_point: Point):
+        tile = self._map.get_tile(tile_point)
+        assert tile is not None
+        self._solver._current_tile = tile
+        self._robot.origin = tile.origin
+
+
+    def calibrate_to_global_origin(self):
+        self.calibrate_to_tile_point(Point(0, 0))
+        self._robot.origin = Point(0, 0)
+
+
+    def calibrate_to_zero(self):
+        """REMEMBER TO CALL THIS AFTER EVERY TEST
+        IF YOU MOVE THE ROBOT BACK WITH YOUR HANDS
+        """
+        self.calibrate_to_north()
+        self.calibrate_to_global_origin()
+
+
+    # basic tests
+
+
+    def test_advance(self):
+        self._solver.advance()
+        self._robot.log()
+
+
+    def test_backtrack(self):
+        self._solver.backtrack()
+        self._robot.log()
+
+
+    def test_advance_left(self):
+        self._solver.advance_left()
+        self._robot.log()
+
+
+    def test_advance_right(self):
+        self._solver.advance_right()
+        self._robot.log()
+
+
+    def test_backtrack_left(self):
+        self._solver.backtrack_left()
+        self._robot.log()
+
+
+    def test_backtrack_right(self):
+        self._solver.backtrack_right()
+        self._robot.log()
+
+
+    def test_drive_forward_until_us_stable(self):
+        self._solver.drive_until_us_stable()
+        self._robot.log()
+
+
+    def test_drive_backward_until_us_stable(self):
+        self._solver.drive_until_us_stable(forward=False)
+        self._robot.log()
+
+
+
 if __name__ == '__main__':
     input('Press enter to begin tests')
 
@@ -109,11 +193,45 @@ if __name__ == '__main__':
     robot.init()
 
     try:
-        tester = Tester(robot)
+        robtest = RobotTester(robot)
+
+        map = Map()
+        '''
+             +----+
+             |    |
+        +----+----+----+
+        |    |    |    |
+        +----+----+----+
+             |    | ← (0,0) current tile
+             +----+
+        '''
+        current_tile = Tile(Point(0, 0))
+        map.add_tile(current_tile)
+        north_tile = map.create_tile_by_direction(current_tile, Direction.NORTH, mark_open=True)
+        north_east_tile = map.create_tile_by_direction(north_tile, Direction.EAST, mark_open=True)
+        north_west_tile = map.create_tile_by_direction(north_tile, Direction.WEST, mark_open=True)
+        north_north_tile = map.create_tile_by_direction(north_tile, Direction.NORTH, mark_open=True)
+
+        solver = Solver(
+            robot,
+            map,
+            test_dummy_tile=current_tile,
+            test_without_calibration=True # TODO, for now
+        )
+
+        solvetest = SolverTester(solver)
+
+        # globals:
+        # robot, robtest, map, solver, solvetest
+
         while True:
             string = input('Enter expr (or nothing to exit): ')
             if not string: break
-            eval(string, globals())
+
+            try:
+                eval(string, globals())
+            except Exception as e:
+                print(e)
 
     finally:
         robot.shutdown()

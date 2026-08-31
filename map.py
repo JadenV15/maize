@@ -173,13 +173,33 @@ class Map:
         return next((tile for tile in self._tiles if tile.tile_point == tile_point), None)
 
 
-    def get_tile_by_direction(self, tile: Tile, direction: Direction) -> Optional[Tile]:
+    def get_tile_by_direction(self, tile: Tile, direction: Direction, require_open: bool) -> Optional[Tile]:
         """Lookup a tile from its direction relative to another tile.
         In other words, moving to the <direction> of <tile> gives us the result (or None).
-        NOTE: there could be a wall between the two tiles.
-        If using this function to find tiles to move to, always check whether that tile's blocked.
+        NOTE: there could be a wall between the two tiles. To only consider tiles that are open, use require_open=True
         """
-        return self.get_tile(shift(tile.tile_point, direction))
+        new_tile = self.get_tile(shift(tile.tile_point, direction))
+
+        if new_tile is None:
+            return None
+
+        if require_open and not self.is_open(tile, new_tile):
+            return None
+
+        return new_tile
+
+
+    def create_tile_by_direction(self, tile: Tile, direction: Direction, mark_open: bool) -> Tile:
+        """Create a tile to the <direction> of <tile>, and add it to the map.
+        NOTE: by default this creates a path between the two tiles (<mark_open>)
+        """
+        new_tile = Tile(shift(tile.tile_point, direction))
+        self.add_tile(new_tile)
+
+        if mark_open:
+            self.mark_open(tile, new_tile)
+
+        return new_tile
 
 
     # walls / open paths
@@ -201,14 +221,7 @@ class Map:
         We check whether an edge exists between the two tiles.
         NOTE: if <direction> leads off the map, i.e. there is no tile in that direction, we return False
         """
-        target = self.get_tile_by_direction(tile, direction)
-        if target is None:
-            return False
-        
-        if not self.is_open(tile, target):
-            return False
-
-        return True
+        return self.get_tile_by_direction(tile, direction, require_open=True) is not None
 
 
     def mark_open(self, a: Tile, b: Tile):

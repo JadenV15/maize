@@ -23,19 +23,22 @@ class BlackTileError(Exception):
 class Solver:
     """mAZE solver"""
     
-    def __init__(self, robot: Robot, map: Map, test_initial_only: bool = False, test_without_calibration: bool = False):
+    def __init__(self, robot: Robot, map: Map, test_dummy_tile: Optional[Tile] = None, test_initial_only: bool = False, test_without_calibration: bool = False):
         self._robot = robot
         self._map = map
 
-        self._initial_only = test_initial_only
-        self._calibrate = test_without_calibration
+        self._is_dummy_map = test_dummy_tile is not None
+        if self._is_dummy_map:
+            self._current_tile = test_dummy_tile # type: ignore
 
-        # added in solve():
-        # self._current_tile: Tile
+        self._is_initial_only = test_initial_only
+        self._is_calibrate = test_without_calibration
 
 
     def solve(self):
         """Main entry point"""
+        assert not self._is_dummy_map
+
         # current position:
         '''
         '@' represents the robot origin
@@ -112,7 +115,7 @@ class Solver:
         # at this point we are set up
         wait()
 
-        if self._initial_only:
+        if self._is_initial_only:
             # Exit, no dfs - I just want to test above code for now
             raise SystemExit
 
@@ -170,19 +173,18 @@ class Solver:
             global_direction = Direction.from_heading(rel_direction.rotate(self._robot.heading))
 
             # get neighbour in that direction
-            neighbour = self._map.get_tile_by_direction(tile, global_direction)
+            neighbour = self._map.get_tile_by_direction(tile, global_direction, require_open=False)
 
             # check if already visited
-            if neighbour is not None: # and neighbour.visited: # technically redundant
+            if neighbour is not None: # and neighbour.visited: # technically redundant because we only add tiles to the map if the tile has been visited
+                assert neighbour.visited
+
+                # remember to mark that tile as 'open' from this tile
+                self._map.mark_open(tile, neighbour)
+
                 continue # next
 
-            neighbour = Tile(tile_point=shift(
-                tile.tile_point, global_direction
-            ))
-
-            # add neighbour
-            self._map.add_tile(neighbour)
-            self._map.mark_open(tile, neighbour)
+            neighbour = self._map.create_tile_by_direction(tile, global_direction, mark_open=True)
 
             # move and explore
             # basically:
@@ -242,7 +244,7 @@ class Solver:
         return self._robot.tile_type == TileType.NOGO
 
 
-    def _drive_until_us_stable(self, calibrate_origin: Point, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+    def drive_until_us_stable(self, calibrate_origin: Optional[Point] = None, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Keep driving until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE). Then calibrate the robot origin to <calibrate_origin>
         Use this to drive until hit wall
         NOTE: US must be facing a wall (and the wall must be within range) for this to work
@@ -273,7 +275,9 @@ class Solver:
         # right now the odometry is all messed up
         # because the wheels have been spinning while slipping, and the robot not moving
         # so we calibrate to the expected origin position
-        self._robot.origin = calibrate_origin
+        # if provided
+        if calibrate_origin is not None:
+            self._robot.origin = calibrate_origin
 
 
     # first, the simple ones
@@ -296,24 +300,25 @@ class Solver:
         final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
         self._robot.drive(final)
 
-        if self._calibrate:
+        if self._is_calibrate:
             # TODO - THIS IS EXPERIMENTAL
 
             global_direction = Direction.from_heading(self._robot.heading)
-            next_tile = self._map.get_tile_by_direction(
+            current_tile = self._map.get_tile_by_direction(
                 self._current_tile,
-                global_direction
+                global_direction,
+                require_open=True
             )
 
-            # next_tile should have been created in dfs()
-            assert next_tile is not None
+            # current_tile should have been created in dfs()
+            assert current_tile is not None
 
             # calibrate only if there is a wall
 
-            if self._map.is_open_direction(next_tile, global_direction):
+            if self._map.is_open_direction(current_tile, global_direction):
                 return
 
-            self._robot.us_turn_to(Direction.NORTH)
+            self._robot.us_turn_to(Direction.NORTH) # which would be along global_direction
             if self._robot.is_open:
                 return
 
@@ -322,10 +327,10 @@ class Solver:
             wait()
 
             # since the US is already pointing relative North,
-            # we can call _drive_until_us_stable
+            # we can call drive_until_us_stable
             # and move forward until we hit the wall
-            self._drive_until_us_stable(calibrate_origin=shift(
-                next_tile.origin, global_direction, TILE_HALF_WIDTH
+            self.drive_until_us_stable(calibrate_origin=shift(
+                current_tile.origin, global_direction, TILE_HALF_WIDTH
             ))
             wait()
 
@@ -333,7 +338,7 @@ class Solver:
             self._robot.drive(TILE_HALF_WIDTH, forward=False)
 
             # calibrate origin to tile center
-            self._robot.origin = next_tile.origin
+            self._robot.origin = current_tile.origin
 
 
     def backtrack(self):

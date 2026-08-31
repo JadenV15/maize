@@ -385,17 +385,23 @@ class Robot:
     def tile_type(self) -> TileType:
         """What type of tile or victim is under the robot origin based on the color?"""
         col = self._cs.color
+
         # check light reflection first
         if self._cs.reflected_light_intensity >= REFLECTED_LIGHT_THRESHOLD:
             return TileType.START
-        elif col == Color.WHITE:
+        
+        elif col == NORMAL_TILE_COLOR:
             return TileType.NORMAL
-        elif col == Color.BLACK:
+        
+        elif col == NOGO_TILE_COLOR:
             return TileType.NOGO
-        elif col == Color.GREEN:
+        
+        elif col == UNHARMED_VICTIM_COLOR:
             return TileType.UNHARMED_VICTIM
-        elif col == Color.RED:
+        
+        elif col == HARMED_VICTIM_COLOR:
             return TileType.HARMED_VICTIM
+        
         else:
             # lets hope its just a glitch
             return TileType.NORMAL

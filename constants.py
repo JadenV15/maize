@@ -55,11 +55,13 @@ class Direction(IntEnum):
             key=lambda direction: abs((degrees - direction + 180) % 360 - 180)
         )
 
+
 class Speed(IntEnum):
     """Different motor speeds, to be used with SpeedPercent"""
     SLOW = 10
     MEDIUM = 20
     FAST = 30
+
 
 # Copied from source
 class Color(IntEnum):
@@ -72,6 +74,7 @@ class Color(IntEnum):
     RED = 5
     WHITE = 6
     BROWN = 7
+
 
 class TileType(Enum):
     """Types of tile surfaces. These members are all mutually exclusive
@@ -87,14 +90,13 @@ class TileType(Enum):
     HARMED_VICTIM = 3
     UNHARMED_VICTIM = 4
 
-class MovementType(Enum):
-    """Types of movement, as outline in the doc"""
-    ADVANCE = 0
-    BACKTRACK = 1
-    ADVANCE_LEFT = 2
-    ADVANCE_RIGHT = 3
-    BACKTRACK_LEFT = 4 # opposite of ADVANCE_LEFT
-    BACKTRACK_RIGHT = 5 # opposite of ADVANCE_RIGHT
+
+# this is because my table at home is black. remember to switch these back on comp day TODO
+NORMAL_TILE_COLOR = Color.BLACK # Color.WHITE
+NOGO_TILE_COLOR = Color.WHITE # Color.BLACK
+
+HARMED_VICTIM_COLOR = Color.RED
+UNHARMED_VICTIM_COLOR = Color.GREEN
 
 
 # SLEEP
