@@ -17,11 +17,10 @@ def main():
 
     try:
         map = Map()
-        solver = Solver(robot, map)
+        solver = Solver(robot, map, test_initial_only=True, test_without_calibration=True)
 
         # Test initial for now
-        solver.solve(test_initial=True)
-        #solver.solve()
+        solver.solve()
 
     finally:
         robot.shutdown()

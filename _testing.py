@@ -11,11 +11,13 @@ if __name__ == '__main__':
     robot.init()
 
     try:
-        solver = Solver(robot, Map())
+        solver = Solver(robot, Map(), test_initial_only=True, test_without_calibration=True)
 
         robot.log()
-        solver.advance_right()
-        #robot.drive(150)
+
+        # THINGS TO TEST:
+        # 
+
         robot.log()
 
     finally:

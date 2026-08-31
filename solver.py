@@ -23,15 +23,18 @@ class BlackTileError(Exception):
 class Solver:
     """mAZE solver"""
     
-    def __init__(self, robot: Robot, map: Map):
+    def __init__(self, robot: Robot, map: Map, test_initial_only: bool = False, test_without_calibration: bool = False):
         self._robot = robot
         self._map = map
+
+        self._initial_only = test_initial_only
+        self._calibrate = test_without_calibration
 
         # added in solve():
         # self._current_tile: Tile
 
 
-    def solve(self, test_initial_only: bool = False, test_without_calibration: bool = False):
+    def solve(self):
         """Main entry point"""
         # current position:
         '''
@@ -109,15 +112,12 @@ class Solver:
         # at this point we are set up
         wait()
 
-        if test_initial_only:
+        if self._initial_only:
             # Exit, no dfs - I just want to test above code for now
             raise SystemExit
 
         # assign current Tile
         self._current_tile = next_tile # type: Tile
-
-        # for testing
-        self._calibrate = not test_without_calibration
 
         # start exploring from tile (0,1)
         self.dfs(next_tile)
