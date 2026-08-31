@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import math
+import time
+from typing import Optional
+
 from constants import *
 from utils import *
 
@@ -238,6 +242,38 @@ class Solver:
         return self._robot.tile_type == TileType.NOGO
 
 
+    def _drive_until_us_stable(self, forward: bool = True, speed: Speed = DEFAULT_SPEED, min_distance: Optional[Numeric] = None, max_distance: Optional[Numeric] = 2 * TILE_WIDTH):
+        """Keep driving until the US readings are stable (no changes)
+        Use this to drive until hit wall
+        NOTE: US must be facing a wall (and the wall must be within range) for this to work
+        min_distance: minimum distance
+        max_distance: maximum distance
+        """
+        initial_pos = self._robot.turning_origin
+        last_reading = self._robot.us_distance
+
+        # start driving
+        with self._robot.driving(forward, speed):
+            while True:
+                if max_distance is not None:
+                    distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
+                    if distance >= max_distance:
+                        return
+                
+                wait(DRIVE_WALL_POLL_INTERVAL_MS)
+                
+                current_reading = self._robot.us_distance
+                if math.isclose(last_reading, current_reading, abs_tol=0.1):
+                    return
+                last_reading = current_reading
+
+        if min_distance is not None:
+            distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
+            if distance < min_distance:
+                delta = min_distance - distance
+                self._robot.drive(delta, forward, speed)
+
+
     # first, the simple ones
 
 
@@ -259,11 +295,43 @@ class Solver:
         self._robot.drive(final)
 
         if self._calibrate:
-            # TODO
+            # TODO - THIS IS EXPERIMENTAL
+            
+            global_direction = Direction.from_heading(self._robot.heading)
             next_tile = self._map.get_tile_by_direction(
                 self._current_tile,
-                Direction.from_heading()
+                global_direction
             )
+
+            # next_tile should have been created in dfs()
+            assert next_tile is not None
+
+            # calibrate only if there is a wall
+
+            if self._map.is_open_direction(next_tile, global_direction):
+                return
+
+            self._robot.us_turn_to(Direction.NORTH)
+            if self._robot.is_open:
+                return
+
+            # here, we have confirmed there is a wall directly in front of the robot
+            # we can move forward and calibrate
+
+            wait()
+
+            # since the US is already pointing relative North,
+            # we can call _drive_until_us_stable
+            # and move forward until we hit the wall
+           
+            # use suitable bounds
+            self._drive_until_us_stable(
+                min_distance=TILE_HALF_WIDTH / 2,
+                max_distance=TILE_WIDTH
+            )
+            wait()
+            # now move back
+            self._robot.drive(TILE_HALF_WIDTH, forward=False)
 
 
     def backtrack(self):

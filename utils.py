@@ -13,9 +13,9 @@ __all__ = [
 ]
 
 
-def wait():
+def wait(time_ms: Numeric = WAIT_TIME_MS):
     """Sleep a short amount of time between movements, to prevent jamming"""
-    time.sleep(WAIT_TIME_MS / 1000)
+    time.sleep(time_ms / 1000)
 
 
 def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:

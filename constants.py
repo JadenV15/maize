@@ -124,6 +124,9 @@ STEP_5_DISTANCE = 205 # extra distance from half-width. increase this to shorten
 STEP_5_A_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see docstring. either 1/2 or 1/3, I think.
 ADVANCE_MVT_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see robot.advance(). similar to above
 
+# drive until hit wall:
+DRIVE_WALL_POLL_INTERVAL_MS = 200 # how often to read from US
+
 
 # ROBOT:
 # all coordinates are relative to the robot origin
