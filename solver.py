@@ -25,7 +25,6 @@ class Solver:
 
         # added in solve():
         # self._current_tile: Tile
-        # self._current_direction: Direction
 
 
     def solve(self, test_initial: bool = False, test_without_calibration: bool = False):
@@ -112,9 +111,8 @@ class Solver:
             # Exit, no dfs - I just want to test above code for now
             raise SystemExit
 
-        # assign current Tile, Direction
+        # assign current Tile
         self._current_tile = next_tile # type: Tile
-        self._current_direction = Direction.NORTH # type: Direction # global direction
 
         # for testing
         self._calibrate = not test_without_calibration
@@ -141,6 +139,9 @@ class Solver:
         This func is called recursively.
         NOTE: <tile> always refers to the tile the robot is ON, NOT the one it's GOING TO.
         """
+        # this tile should have been assigned as current
+        assert self._current_tile is tile
+        
         # mark this tile as visited (we are ON it)
         # technically, all tiles in map are visited. This is just a bit more explicit, i guess
         assert not tile.visited
@@ -157,6 +158,8 @@ class Solver:
         open_directions = self._robot.lookaround() # this acts like wait() because it takes some time
 
         for rel_direction in open_directions:
+            assert rel_direction != Direction.SOUTH
+
             # NOTE: this direction is RELATIVE. we need to convert it to a GLOBAL on.
             global_direction = Direction(rotate(rel_direction, self._robot.heading))
 
@@ -183,35 +186,27 @@ class Solver:
             # while also handling black tiles (black tile error)
             
             try:
-                if rel_direction == Direction.NORTH:
-                    self.advance()
+                functions = {
+                    Direction.NORTH: (self.advance, self.backtrack),
+                    Direction.WEST: (self.advance_left, self.backtrack_left),
+                    Direction.EAST: (self.advance_right, self.backtrack_right)
+                }
 
-                    self.dfs(neighbour)
+                move_there, move_back = functions[rel_direction]
 
-                    self.backtrack()
-                    wait()
+                move_there()
+                self._current_tile = neighbour
 
-                elif rel_direction == Direction.SOUTH:
-                    raise Exception # wtf
+                self.dfs(neighbour)
+                
+                move_back()
+                self._current_tile = tile
 
-                elif rel_direction == Direction.WEST:
-                    self.advance_left()
-
-                    self.dfs(neighbour)
-
-                    self.backtrack_left()
-                    wait()
-
-                elif rel_direction == Direction.EAST:
-                    self.advance_right()
-
-                    self.dfs(neighbour)
-
-                    self.backtrack_right()
-                    wait()
+                wait()
 
             except BlackTileError:
                 # we are back exactly where we started (`tile`)
+                self._current_tile = tile
 
                 # TODO: technically we've 'visited' the black tile
                 # do we use `visited` anywhere important? if so, might need rethink this
