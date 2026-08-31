@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from contextlib import contextmanager
 import math
 from typing import List, Optional, Union
 
@@ -199,7 +200,7 @@ class Robot:
         elif clockwise is False and delta > 0:
             delta -= 360
 
-        # account for offset
+        # account for correction
         corrected_delta = delta * WHEEL_ROTATION_RATIO
         offset = delta - corrected_delta
         
@@ -222,7 +223,7 @@ class Robot:
         # For some reason, turn_degrees accepts negative degrees, not negative speed
         degrees *= 1 if clockwise else -1
 
-        # account for offset
+        # account for correction
         corrected_degrees = degrees * WHEEL_ROTATION_RATIO
         offset = degrees - corrected_degrees
 
@@ -235,14 +236,14 @@ class Robot:
         """Drive <forward> by <distance>"""
         assert distance >= 0
 
-        # account for offset
+        # account for correction
         # here its easier to just manually take charge of
         # self._drive.x_pos_mm, self._drive.y_pos_mm
         current_pos = self.turning_origin
         delta = distance * (1 if forward else -1)
         new_pos = shift(current_pos, self.heading, delta)
 
-        # account for offset
+        # account for correction
         corrected_distance = distance * WHEEL_DRIVING_RATIO
         self._drive.on_for_distance(SpeedPercent((1 if forward else -1) * speed), corrected_distance)
 
@@ -250,11 +251,34 @@ class Robot:
         self.turning_origin = new_pos
 
 
+    @contextmanager
+    def driving(self, forward: bool = True, speed: Speed = DEFAULT_SPEED):
+        """Start driving <forward> at <speed>"""
+        # account for correction
+        initial_pos = self.turning_origin
+
+        motor_speed = SpeedPercent((1 if forward else -1) * speed)
+        self._drive.on(motor_speed, motor_speed)
+
+        try:
+            yield
+        finally:
+            self._drive.off()
+
+            # account for correction
+            distance = initial_pos.distance(self.turning_origin)
+            actual_distance = distance / WHEEL_DRIVING_RATIO
+
+            new_pos = shift(initial_pos, self.heading, actual_distance)
+            self.turning_origin = new_pos
+
+
     @property
     def is_moving(self):
         """Check if the motors are moving normally.
         "moving normally" means running, not stalled, not overloaded
         NOTE: this DOESN'T WORK (always True) for our robot because the wheels keep spinning after the robot is blocked. Avoid this
+        NOTE: i'm tempted to just remove this method
         """
         return self._drive.is_running and not self._drive.is_stalled and not self._drive.is_overloaded
 
@@ -784,5 +808,6 @@ class Robot:
         self._step_2()
         wait()
         self._step_1(inverse=True)
+
 
 
