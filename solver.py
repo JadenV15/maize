@@ -163,7 +163,7 @@ class Solver:
             assert rel_direction != Direction.SOUTH
 
             # NOTE: this direction is RELATIVE. we need to convert it to a GLOBAL on.
-            global_direction = Direction(rotate(rel_direction, self._robot.heading))
+            global_direction = Direction.from_heading(rel_direction.rotate(self._robot.heading))
 
             # get neighbour in that direction
             neighbour = self._map.get_tile_by_direction(tile, global_direction)
@@ -223,6 +223,11 @@ class Solver:
 
 
     # movement
+    # each movement should assume the robot origin is EXACTLY
+    # on the current tile's origin
+    # and each movement should (try to) move the robot
+    # so that the origin is EXACTLY on the target tile's origin
+    # (^^^ TODO - calibration)
 
 
     @property
@@ -252,6 +257,13 @@ class Solver:
 
         final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
         self._robot.drive(final)
+
+        if self._calibrate:
+            # TODO
+            next_tile = self._map.get_tile_by_direction(
+                self._current_tile,
+                Direction.from_heading()
+            )
 
 
     def backtrack(self):

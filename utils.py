@@ -10,7 +10,6 @@ from constants import Numeric, Direction, WAIT_TIME_MS
 __all__ = [
     'wait',
     'shift',
-    'rotate'
 ]
 
 
@@ -40,11 +39,5 @@ def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:
     )
 
 
-def rotate(degrees: Numeric, amount: Numeric, clockwise: bool = True) -> Numeric:
-    """Rotate a heading (<degrees>) by <amount> in a <clockwise> direction"""
-    assert 0 <= degrees < 360
-
-    amount *= 1 if clockwise else -1
-    return (degrees + amount) % 360 # return [0, 360)
 
 

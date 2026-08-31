@@ -34,6 +34,13 @@ class Direction(IntEnum):
     SOUTH = 180
     WEST = 270
 
+    def rotate(self, amount: Numeric, clockwise: bool = True) -> Numeric:
+        """Rotate this direction by <amount> in a <clockwise> direction"""
+        assert 0 <= self < 360
+
+        amount *= 1 if clockwise else -1
+        return (self + amount) % 360 # return [0, 360)
+
     def reverse(self) -> 'Direction':
         """Flip this direction, i.e. add 180deg and wrap to [0, 360)"""
         return type(self)((self + 180) % 360)
