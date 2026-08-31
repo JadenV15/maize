@@ -59,8 +59,8 @@ class Direction(IntEnum):
 class Speed(IntEnum):
     """Different motor speeds, to be used with SpeedPercent"""
     SLOW = 10
-    MEDIUM = 20
-    FAST = 30
+    MEDIUM = 25
+    FAST = 40
 
 
 # Copied from source
