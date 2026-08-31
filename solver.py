@@ -9,6 +9,7 @@ from utils import *
 
 from robot import Robot
 from map import Tile, Edge, Map
+from indicate import *
 
 __all__ = ['Solver']
 
@@ -38,6 +39,8 @@ class Solver:
     def solve(self):
         """Main entry point"""
         assert not self._is_dummy_map
+
+        indicate_start()
 
         # current position:
         '''
@@ -113,11 +116,12 @@ class Solver:
         next_tile.tile_type = tile_type
 
         # at this point we are set up
-        wait()
 
         if self._is_initial_only:
             # Exit, no dfs - I just want to test above code for now
-            raise SystemExit
+            return
+        
+        wait()
 
         # assign current Tile
         self._current_tile = next_tile # type: Tile
@@ -130,7 +134,7 @@ class Solver:
         # finally, move back to the start tile and align against back wall
         self._robot.drive(delta, forward=False)
 
-        #TODO
+        indicate_finish()
 
 
     # dfs
@@ -162,6 +166,12 @@ class Solver:
         tile_type = self._robot.tile_type
         assert tile_type not in (TileType.START, TileType.NOGO)
         tile.tile_type = tile_type
+
+        # announce if applicable
+        if tile_type == TileType.HARMED_VICTIM:
+            indicate_harmed_victim()
+        elif tile_type == TileType.UNHARMED_VICTIM:
+            indicate_unharmed_victim()
 
         # scan open directions
         open_directions = self._robot.lookaround() # this acts like wait() because it takes some time
@@ -294,6 +304,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             self._robot.drive(initial, forward=False)
             raise BlackTileError
 
@@ -571,6 +582,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_3(inverse=True)
             wait()
@@ -583,6 +595,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_4(inverse=True)
             wait()
@@ -597,6 +610,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_5_a(inverse=True)
             wait()
@@ -625,6 +639,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             self._step_3(inverse=True)
             wait()
             self._step_2()
@@ -637,6 +652,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             self._step_4()
             wait()
             self._step_3(inverse=True)
@@ -650,6 +666,7 @@ class Solver:
         wait()
 
         if self._is_black:
+            indicate_black_tile()
             self._step_5_a(inverse=True)
             wait()
             self._step_4()
