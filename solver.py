@@ -23,8 +23,12 @@ class Solver:
         self._robot = robot
         self._map = map
 
+        # added in solve():
+        # self._current_tile: Tile
+        # self._current_direction: Direction
 
-    def solve(self, test_initial: bool = False):
+
+    def solve(self, test_initial: bool = False, test_without_calibration: bool = False):
         """Main entry point"""
         # current position:
         '''
@@ -107,6 +111,13 @@ class Solver:
         if test_initial:
             # Exit, no dfs - I just want to test above code for now
             raise SystemExit
+
+        # assign current Tile, Direction
+        self._current_tile = next_tile # type: Tile
+        self._current_direction = Direction.NORTH # type: Direction # global direction
+
+        # for testing
+        self._calibrate = not test_without_calibration
 
         # start exploring from tile (0,1)
         self.dfs(next_tile)
