@@ -33,7 +33,7 @@ class Solver:
             self._current_tile = test_dummy_tile # type: ignore
 
         self._is_initial_only = test_initial_only
-        self._is_calibrate = test_without_calibration
+        self._is_calibrate = not test_without_calibration
 
 
     def solve(self):
