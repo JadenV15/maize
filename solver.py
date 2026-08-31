@@ -24,7 +24,7 @@ class Solver:
         self._map = map
 
 
-    def solve(self):
+    def solve(self, test_initial: bool = False):
         """Main entry point"""
         # current position:
         '''
@@ -92,7 +92,6 @@ class Solver:
 
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
-        print(delta)
         self._robot.drive(delta)
         #next_tile.visited = True
         # ^^^ don't do this, as dfs() will mark it as visited
@@ -105,8 +104,9 @@ class Solver:
         # at this point we are set up
         wait()
 
-        # Exit, no dfs - I just want to test above code for now
-        raise SystemExit
+        if test_initial:
+            # Exit, no dfs - I just want to test above code for now
+            raise SystemExit
 
         # start exploring from tile (0,1)
         self.dfs(next_tile)

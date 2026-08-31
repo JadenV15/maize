@@ -19,7 +19,9 @@ def main():
         map = Map()
         solver = Solver(robot, map)
 
-        solver.solve()
+        # Test initial for now
+        solver.solve(test_initial=True)
+        #solver.solve()
 
     finally:
         robot.shutdown()
