@@ -179,7 +179,7 @@ class Robot:
     # motion
 
 
-    def turn_to(self, degrees: Numeric, clockwise: Optional[bool] = None, speed: Speed = DEFAULT_SPEED):
+    def turn_to(self, degrees: Numeric, clockwise: Optional[bool] = None, speed: Speed = DEFAULT_TURNING_SPEED):
         """Turn to an absolute global heading.
         <degrees> must be in [0, 360)
         If <clockwise> not specified, choose the shortest length, other follow <clockwise>
@@ -208,7 +208,7 @@ class Robot:
         #self.calibrate_heading(degrees)
 
 
-    def turn_by(self, degrees: Numeric, clockwise: bool = True, speed: Speed = DEFAULT_SPEED):
+    def turn_by(self, degrees: Numeric, clockwise: bool = True, speed: Speed = DEFAULT_TURNING_SPEED):
         """Turn by <degrees> <clockwise>
         <degrees> must be in [0, 360)
         """
@@ -225,7 +225,7 @@ class Robot:
         self.heading += offset
 
 
-    def drive(self, distance: Numeric, forward: bool = True, speed: Speed = DEFAULT_SPEED):
+    def drive(self, distance: Numeric, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Drive <forward> by <distance>"""
         assert distance >= 0
 
@@ -245,7 +245,7 @@ class Robot:
 
 
     @contextmanager
-    def driving(self, forward: bool = True, speed: Speed = DEFAULT_SPEED):
+    def driving(self, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Start driving <forward> at <speed>"""
         # account for correction
         initial_pos = self.turning_origin

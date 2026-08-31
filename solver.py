@@ -242,36 +242,38 @@ class Solver:
         return self._robot.tile_type == TileType.NOGO
 
 
-    def _drive_until_us_stable(self, forward: bool = True, speed: Speed = DEFAULT_SPEED, min_distance: Optional[Numeric] = None, max_distance: Optional[Numeric] = 2 * TILE_WIDTH):
-        """Keep driving until the US readings are stable (no changes)
+    def _drive_until_us_stable(self, calibrate_origin: Point, forward: bool = True, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+        """Keep driving until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE). Then calibrate the robot origin to <calibrate_origin>
         Use this to drive until hit wall
         NOTE: US must be facing a wall (and the wall must be within range) for this to work
-        min_distance: minimum distance
-        max_distance: maximum distance
         """
+        # TODO: for now don't call this with min_distance / max_distance, because this could mask bugs
         initial_pos = self._robot.turning_origin
         last_reading = self._robot.us_distance
 
         # start driving
         with self._robot.driving(forward, speed):
             while True:
-                if max_distance is not None:
-                    distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
-                    if distance >= max_distance:
-                        return
-                
                 wait(DRIVE_WALL_POLL_INTERVAL_MS)
-                
+
+                # check if distance limit reached
+                distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
+                if distance >= DRIVE_WALL_MAX_DISTANCE:
+                    break
+
+                # check if US reading is stable
                 current_reading = self._robot.us_distance
                 if math.isclose(last_reading, current_reading, abs_tol=0.1):
-                    return
+                    break
                 last_reading = current_reading
 
-        if min_distance is not None:
-            distance = initial_pos.distance(self._robot.turning_origin) / WHEEL_DRIVING_RATIO
-            if distance < min_distance:
-                delta = min_distance - distance
-                self._robot.drive(delta, forward, speed)
+        # extra distance (robot is already at the wall, this just hopefully corrects the heading by ramming against the wall)
+        self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward, speed)
+
+        # right now the odometry is all messed up
+        # because the wheels have been spinning while slipping, and the robot not moving
+        # so we calibrate to the expected origin position
+        self._robot.origin = calibrate_origin
 
 
     # first, the simple ones
@@ -317,21 +319,21 @@ class Solver:
 
             # here, we have confirmed there is a wall directly in front of the robot
             # we can move forward and calibrate
-
             wait()
 
             # since the US is already pointing relative North,
             # we can call _drive_until_us_stable
             # and move forward until we hit the wall
-           
-            # use suitable bounds
-            self._drive_until_us_stable(
-                min_distance=TILE_HALF_WIDTH / 2,
-                max_distance=TILE_WIDTH
-            )
+            self._drive_until_us_stable(calibrate_origin=shift(
+                next_tile.origin, global_direction, TILE_HALF_WIDTH
+            ))
             wait()
+
             # now move back
             self._robot.drive(TILE_HALF_WIDTH, forward=False)
+
+            # calibrate origin to tile center
+            self._robot.origin = next_tile.origin
 
 
     def backtrack(self):

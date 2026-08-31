@@ -125,14 +125,16 @@ STEP_5_A_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see docstring. either 1/2 or 1/
 ADVANCE_MVT_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see robot.advance(). similar to above
 
 # drive until hit wall:
-DRIVE_WALL_POLL_INTERVAL_MS = 200 # how often to read from US
-
+DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
+DRIVE_WALL_MAX_DISTANCE = 2 * TILE_WIDTH # worst case, if stop condition never met
+DRIVE_WALL_EXTRA_DISTANCE = 10 # TODO - extra distance to ensure heading is aligned
 
 # ROBOT:
 # all coordinates are relative to the robot origin
 
-# TODO: appropriate default speed
-DEFAULT_SPEED = Speed.SLOW
+# TODO: appropriate default speeds
+DEFAULT_STRAIGHT_SPEED = Speed.MEDIUM
+DEFAULT_TURNING_SPEED = Speed.SLOW
 
 # TODO: finalise measurements
 ROBOT_WIDTH = 135
@@ -149,7 +151,7 @@ US_PIN = INPUT_3
 US_MOTOR_PIN = OUTPUT_C
 US_MOTOR_MIDPOINT = Point(0, -52)
 US_MOTOR_POLARITY = Motor.POLARITY_NORMAL
-US_MOTOR_SPEED = Speed.SLOW
+US_MOTOR_SPEED = Speed.MEDIUM # TODO
 
 CS_PIN = INPUT_4
 CS_MIDPOINT = Point(0, 0) # technically 'ctrpoint'
