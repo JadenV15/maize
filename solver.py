@@ -418,7 +418,7 @@ class Solver:
     '''
 
 
-    def _step_1(self, inverse=False):
+    def _turn_step_1(self, inverse=False):
         '''
         1) Move backwards
         +----(0, 1)-----+
@@ -441,7 +441,7 @@ class Solver:
             self._robot.drive(TILE_HALF_WIDTH)
 
 
-    def _step_2(self, inverse=False):
+    def _turn_step_2(self, inverse=False):
         '''
         2) Rotate to the left
         +----(0, 1)-----+
@@ -464,7 +464,7 @@ class Solver:
             self._robot.turn_by(STEP_2_ROTATION, clockwise=False)
 
 
-    def _step_3(self, inverse=False):
+    def _turn_step_3(self, inverse=False):
         '''
         3) Move forward diagonally
         +----(0, 1)-----+----(1, 0)-----+
@@ -491,7 +491,7 @@ class Solver:
             self._robot.drive(STEP_3_DISTANCE, forward=False)
 
 
-    def _step_4(self, inverse=False):
+    def _turn_step_4(self, inverse=False):
         '''
         4) Rotate to horizontal
         (closeup diagram)
@@ -520,7 +520,7 @@ class Solver:
             self._robot.turn_by(STEP_4_ROTATION, clockwise=False)
 
 
-    def _step_5(self, inverse=False):
+    def _turn_step_5(self, inverse=False):
         '''
         5) Move forward to next tile's origin
         '#' represents the left wall
@@ -548,7 +548,7 @@ class Solver:
     # use the latter two if we need to check for black tile after step_5_a (or b, if inverse)
 
 
-    def _step_5_a(self, inverse=False):
+    def _turn_step_5_a(self, inverse=False):
         """(when inverse=False) Move just enough to bring the CS onto the tile, to check whether it's black
         +----(0, 0)-----+----(1, 0)-----+
         |               |       |       |
@@ -575,7 +575,7 @@ class Solver:
             self._robot.drive(STEP_5_A_DISTANCE, forward=False)
 
 
-    def _step_5_b(self, inverse=False):
+    def _turn_step_5_b(self, inverse=False):
         """See previous docstrings. (when inverse=False) This drives the remaining distance to next tile's origin"""
         if not inverse:
             self._robot.drive(STEP_5_B_DISTANCE)
@@ -589,56 +589,56 @@ class Solver:
         Raise black tile error and return to original position if black tile detected.
         """
         # TODO: handle calibration
-        self._step_1()
+        self._turn_step_1()
         wait()
-        self._step_2()
+        self._turn_step_2()
         wait()
-        self._step_3()
-        wait()
-
-        if handle_nogo_tiles and self._is_nogo:
-            indicate_nogo_tile()
-            # do everything backwards to return to initial position
-            self._step_3(inverse=True)
-            wait()
-            self._step_2(inverse=True)
-            wait()
-            self._step_1(inverse=True)
-            raise BlackTileError
-
-        self._step_4()
+        self._turn_step_3()
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
             # do everything backwards to return to initial position
-            self._step_4(inverse=True)
+            self._turn_step_3(inverse=True)
             wait()
-            self._step_3(inverse=True)
+            self._turn_step_2(inverse=True)
             wait()
-            self._step_2(inverse=True)
-            wait()
-            self._step_1(inverse=True)
+            self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._step_5_a()
+        self._turn_step_4()
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
             # do everything backwards to return to initial position
-            self._step_5_a(inverse=True)
+            self._turn_step_4(inverse=True)
             wait()
-            self._step_4(inverse=True)
+            self._turn_step_3(inverse=True)
             wait()
-            self._step_3(inverse=True)
+            self._turn_step_2(inverse=True)
             wait()
-            self._step_2(inverse=True)
-            wait()
-            self._step_1(inverse=True)
+            self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._step_5_b()
+        self._turn_step_5_a()
+        wait()
+
+        if handle_nogo_tiles and self._is_nogo:
+            indicate_nogo_tile()
+            # do everything backwards to return to initial position
+            self._turn_step_5_a(inverse=True)
+            wait()
+            self._turn_step_4(inverse=True)
+            wait()
+            self._turn_step_3(inverse=True)
+            wait()
+            self._turn_step_2(inverse=True)
+            wait()
+            self._turn_step_1(inverse=True)
+            raise BlackTileError
+
+        self._turn_step_5_b()
 
 
     def advance_left(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
@@ -647,54 +647,54 @@ class Solver:
         Raise black tile error and return to original position if black tile detected.
         """
         # TODO: handle calibration
-        self._step_1()
+        self._turn_step_1()
         wait()
-        self._step_2(inverse=True)
+        self._turn_step_2(inverse=True)
         wait()
-        self._step_3()
+        self._turn_step_3()
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
-            self._step_3(inverse=True)
+            self._turn_step_3(inverse=True)
             wait()
-            self._step_2()
+            self._turn_step_2()
             wait()
-            self._step_1(inverse=True)
+            self._turn_step_1(inverse=True)
             raise BlackTileError
 
         # TODO: technically, if we rotate and find a black tile, we're not aloud to rotate back out of it.
-        self._step_4(inverse=True)
+        self._turn_step_4(inverse=True)
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
-            self._step_4()
+            self._turn_step_4()
             wait()
-            self._step_3(inverse=True)
+            self._turn_step_3(inverse=True)
             wait()
-            self._step_2()
+            self._turn_step_2()
             wait()
-            self._step_1(inverse=True)
+            self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._step_5_a()
+        self._turn_step_5_a()
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
-            self._step_5_a(inverse=True)
+            self._turn_step_5_a(inverse=True)
             wait()
-            self._step_4()
+            self._turn_step_4()
             wait()
-            self._step_3(inverse=True)
+            self._turn_step_3(inverse=True)
             wait()
-            self._step_2()
+            self._turn_step_2()
             wait()
-            self._step_1(inverse=True)
+            self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._step_5_b()
+        self._turn_step_5_b()
 
 
     def backtrack_right(self):
@@ -703,15 +703,15 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._step_5(inverse=True)
+        self._turn_step_5(inverse=True)
         wait()
-        self._step_4(inverse=True)
+        self._turn_step_4(inverse=True)
         wait()
-        self._step_3(inverse=True)
+        self._turn_step_3(inverse=True)
         wait()
-        self._step_2(inverse=True)
+        self._turn_step_2(inverse=True)
         wait()
-        self._step_1(inverse=True)
+        self._turn_step_1(inverse=True)
 
 
     def backtrack_left(self):
@@ -720,12 +720,12 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._step_5(inverse=True)
+        self._turn_step_5(inverse=True)
         wait()
-        self._step_4()
+        self._turn_step_4()
         wait()
-        self._step_3(inverse=True)
+        self._turn_step_3(inverse=True)
         wait()
-        self._step_2()
+        self._turn_step_2()
         wait()
-        self._step_1(inverse=True)
+        self._turn_step_1(inverse=True)
