@@ -564,15 +564,40 @@ class Solver:
         |       | |     |       |
         +-------|-+     |       |
                 <=>
-              length
+               buffer
 
-        Too small, and you risk not getting into tile (1, 0) at all
+        Distance too small, and you risk not getting into tile (1, 0) at all
         Too big, and you risk getting more than 50% the robot into tile (1, 0), which is not good according to the rules
         """
         if not inverse:
             self._robot.drive(STEP_5_A_DISTANCE)
         else:
             self._robot.drive(STEP_5_A_DISTANCE, forward=False)
+        
+
+    def _turn_step_5_a_with_calibrate(self, inverse=False):
+        """This is basically step 5a but with calibration.
+        If there is a wall behind, back into that wall, then move forward into the next tile.
+        If there is no wall, do step_5_a as usual.
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |               |
+        +-----+---+-----+               |
+        |     |   |     |               |
+        +-----+---+-----+               |
+        |   ← ← ← ← ←   |               |
+        +---------------+---------------+
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |               |
+        +-------+-+-------+             |
+        |       | |     | |             |
+        +-------+-+-------+             |
+        |       → → → → |               |
+        +---------------+---------------+
+                        <=>
+                       buffer
+        """
+        # TODO
+
 
 
     def _turn_step_5_b(self, inverse=False):
@@ -621,13 +646,19 @@ class Solver:
             self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._turn_step_5_a()
+        if calibrate:
+            self._turn_step_5_a_with_calibrate()
+        else:
+            self._turn_step_5_a()
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
             # do everything backwards to return to initial position
-            self._turn_step_5_a(inverse=True)
+            if calibrate:
+                self._turn_step_5_a_with_calibrate(inverse=True)
+            else:
+                self._turn_step_5_a(inverse=True)
             wait()
             self._turn_step_4(inverse=True)
             wait()
@@ -639,6 +670,26 @@ class Solver:
             raise BlackTileError
 
         self._turn_step_5_b()
+
+        if handle_nogo_tiles and self._is_nogo:
+            wait()
+            indicate_nogo_tile()
+            # do everything backwards to return to initial position
+            self._turn_step_5_b(inverse=True)
+            wait()
+            if calibrate:
+                self._turn_step_5_a_with_calibrate(inverse=True)
+            else:
+                self._turn_step_5_a(inverse=True)
+            wait()
+            self._turn_step_4(inverse=True)
+            wait()
+            self._turn_step_3(inverse=True)
+            wait()
+            self._turn_step_2(inverse=True)
+            wait()
+            self._turn_step_1(inverse=True)
+            raise BlackTileError
 
 
     def advance_left(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
@@ -678,12 +729,18 @@ class Solver:
             self._turn_step_1(inverse=True)
             raise BlackTileError
 
-        self._turn_step_5_a()
+        if calibrate:
+            self._turn_step_5_a_with_calibrate(inverse=True)
+        else:
+            self._turn_step_5_a(inverse=True)
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
             indicate_nogo_tile()
-            self._turn_step_5_a(inverse=True)
+            if calibrate:
+                self._turn_step_5_a_with_calibrate(inverse=True)
+            else:
+                self._turn_step_5_a(inverse=True)
             wait()
             self._turn_step_4()
             wait()
@@ -695,6 +752,26 @@ class Solver:
             raise BlackTileError
 
         self._turn_step_5_b()
+
+        if handle_nogo_tiles and self._is_nogo:
+            wait()
+            indicate_nogo_tile()
+            # do everything backwards to return to initial position
+            self._turn_step_5_b(inverse=True)
+            wait()
+            if calibrate:
+                self._turn_step_5_a_with_calibrate(inverse=True)
+            else:
+                self._turn_step_5_a(inverse=True)
+            wait()
+            self._turn_step_4()
+            wait()
+            self._turn_step_3(inverse=True)
+            wait()
+            self._turn_step_2()
+            wait()
+            self._turn_step_1(inverse=True)
+            raise BlackTileError
 
 
     def backtrack_right(self):

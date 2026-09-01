@@ -51,10 +51,10 @@ def indicate_start():
 
 
 def indicate_nogo_tile():
-    """Pause for 1 second, indicating that the robot has hit a black tile and will be reversing"""
+    """Pause for half a second, indicating that the robot has hit a black tile and will be reversing"""
     start_beep()
     set_color(LED_NOGO_COLOR)
-    wait(1000)
+    wait(500)
     clear_color()
 
 
