@@ -2,6 +2,9 @@
 
 # FOLLOW THE PSEUDOCODE
 
+# NOTE: remove all the debug stuff!
+# NOTE: ensure no initial debris under the bot!
+
 from constants import *
 from utils import *
 
@@ -17,9 +20,8 @@ def main():
 
     try:
         map = Map()
-        solver = Solver(robot, map, test_initial_only=True, test_without_calibration=True)
+        solver = Solver(robot, map)
 
-        # Test initial for now
         solver.solve()
 
     finally:

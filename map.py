@@ -153,6 +153,11 @@ class Map:
         self._edges = [] # type: List[Edge]
 
 
+    @property
+    def is_empty(self) -> bool:
+        return bool(self._tiles)
+
+
     # tile operations
 
 

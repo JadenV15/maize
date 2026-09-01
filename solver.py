@@ -24,21 +24,20 @@ class BlackTileError(Exception):
 class Solver:
     """mAZE solver"""
     
-    def __init__(self, robot: Robot, map: Map, test_dummy_tile: Optional[Tile] = None, test_initial_only: bool = False, test_without_calibration: bool = False):
+    def __init__(self, robot: Robot, map: Map):
         self._robot = robot
         self._map = map
 
-        self._is_dummy_map = test_dummy_tile is not None
-        if self._is_dummy_map:
-            self._current_tile = test_dummy_tile # type: ignore
 
-        self._is_initial_only = test_initial_only
-        self._is_calibrate = not test_without_calibration
-
-
-    def solve(self):
+    def solve(self, test_initial_only: bool = False):
         """Main entry point"""
-        assert not self._is_dummy_map
+        # assert we are starting fresh
+        assert self._map.is_empty
+        try:
+            self._current_tile
+        except AttributeError: pass
+        else:
+            raise Exception
 
         indicate_start()
 
@@ -117,8 +116,8 @@ class Solver:
 
         # at this point we are set up
 
-        if self._is_initial_only:
-            # Exit, no dfs - I just want to test above code for now
+        if test_initial_only:
+            # Exit, no dfs
             return
         
         wait()
@@ -246,9 +245,9 @@ class Solver:
     # so that the origin is EXACTLY on the target tile's origin
     # (^^^ TODO - calibration)
 
-
+    
     @property
-    def _is_black(self) -> bool:
+    def _is_nogo(self) -> bool:
         """Is the tile under the CS black?
         This is just to save me some typing when writing the movements
         """
@@ -307,7 +306,7 @@ class Solver:
     # first, the simple ones
 
 
-    def advance(self):
+    def advance(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
         """Move forward.
         This is movement #1 in the doc.
         Raise black tile error and return to original position if black tile detected.
@@ -330,19 +329,23 @@ class Solver:
         If 'wall' exists, move up to it then back, to calibrate
         TODO: is there enough time to calibrate?
         """
-        initial = TILE_HALF_WIDTH + ADVANCE_MVT_DISTANCE
-        self._robot.drive(initial)
-        wait()
+        if handle_nogo_tiles:
+            initial = TILE_HALF_WIDTH + ADVANCE_MVT_DISTANCE
+            self._robot.drive(initial)
+            wait()
 
-        if self._is_black:
-            indicate_black_tile()
-            self._robot.drive(initial, forward=False)
-            raise BlackTileError
+            if self._is_nogo:
+                indicate_black_tile()
+                self._robot.drive(initial, forward=False)
+                raise BlackTileError
 
-        final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
-        self._robot.drive(final)
+            final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
+            self._robot.drive(final)
 
-        if self._is_calibrate:
+        else:
+            self._robot.drive(TILE_WIDTH)
+
+        if calibrate:
             # TODO - THIS IS EXPERIMENTAL
 
             global_direction = Direction.from_heading(self._robot.heading)
@@ -606,11 +609,12 @@ class Solver:
             self._robot.drive(distance, forward=False)
 
 
-    def advance_right(self):
+    def advance_right(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
         """Move forward and to the right.
         This is movement #4 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
+        # TODO: handle calibration
         self._step_1()
         wait()
         self._step_2()
@@ -618,7 +622,7 @@ class Solver:
         self._step_3()
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_3(inverse=True)
@@ -631,7 +635,7 @@ class Solver:
         self._step_4()
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_4(inverse=True)
@@ -646,7 +650,7 @@ class Solver:
         self._step_5_a()
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             # do everything backwards to return to initial position
             self._step_5_a(inverse=True)
@@ -663,11 +667,12 @@ class Solver:
         self._step_5_b()
 
 
-    def advance_left(self):
+    def advance_left(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
         """Move forward and to the left.
         This is movement #3 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
+        # TODO: handle calibration
         self._step_1()
         wait()
         self._step_2(inverse=True)
@@ -675,7 +680,7 @@ class Solver:
         self._step_3()
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             self._step_3(inverse=True)
             wait()
@@ -688,7 +693,7 @@ class Solver:
         self._step_4(inverse=True)
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             self._step_4()
             wait()
@@ -702,7 +707,7 @@ class Solver:
         self._step_5_a()
         wait()
 
-        if self._is_black:
+        if handle_nogo_tiles and self._is_nogo:
             indicate_black_tile()
             self._step_5_a(inverse=True)
             wait()

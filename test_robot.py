@@ -7,10 +7,12 @@ from robot import Robot
 from map import Tile, Map
 from solver import Solver
 
+# do not remove:
 import button
 import indicate
 
 __all__ = ['RobotTester', 'SolverTester']
+
 
 
 class RobotTester:
@@ -77,8 +79,7 @@ class RobotTester:
         self._robot.log()
 
 
-    def test_us_distance(self): # position robot to face a wall
-        """Expect a small us_distance"""
+    def test_us_distance(self):
         print(self._robot.us_distance)
 
 
@@ -89,24 +90,19 @@ class RobotTester:
 
 
     def test_us_calibration(self):
-        """Expect an absolute turn to North"""
         self._robot.us_calibrate_to_north()
         self._robot.log()
 
 
     def test_color(self):
-        """Expect accurate color reading"""
         print(self._robot.color)
 
 
     def test_type(self):
-        """Expect accurate tile/victim type detection"""
         print(self._robot.tile_type)
 
 
     # calibration tests
-
-
     #TODO
 
 
@@ -115,6 +111,10 @@ class SolverTester:
         self._solver = solver
         self._robot = solver._robot
         self._map = solver._map
+
+        # tester settings
+        self.test_nogo_tiles = False
+        self.test_calibration = False
 
 
     def calibrate_to_direction(self, direction: Direction):
@@ -148,8 +148,12 @@ class SolverTester:
     # basic tests
 
 
+    def test_initial_solve(self):
+        self._solver.solve(test_initial_only=True)
+
+
     def test_advance(self):
-        self._solver.advance()
+        self._solver.advance(self.test_nogo_tiles, self.test_calibration)
         self._robot.log()
 
 
@@ -159,12 +163,12 @@ class SolverTester:
 
 
     def test_advance_left(self):
-        self._solver.advance_left()
+        self._solver.advance_left(self.test_nogo_tiles, self.test_calibration)
         self._robot.log()
 
 
     def test_advance_right(self):
-        self._solver.advance_right()
+        self._solver.advance_right(self.test_nogo_tiles, self.test_calibration)
         self._robot.log()
 
 
@@ -215,24 +219,20 @@ if __name__ == '__main__':
         north_west_tile = map.create_tile_by_direction(north_tile, Direction.WEST, mark_open=True)
         north_north_tile = map.create_tile_by_direction(north_tile, Direction.NORTH, mark_open=True)
 
-        solver = Solver(
-            robot,
-            map,
-            test_dummy_tile=current_tile,
-            test_without_calibration=True # TODO, for now
-        )
+        solver = Solver(robot, map)
 
         solvetest = SolverTester(solver)
 
         # globals:
         # robot, robtest, map, solver, solvetest, button, indicate
+        # (and constants.*)
 
         while True:
-            string = input('Enter expr (or nothing to exit): ')
+            string = input('Enter command (or nothing to exit): ')
             if not string: break
 
             try:
-                eval(string, globals())
+                exec(string, globals())
             except Exception as e:
                 print(e)
 

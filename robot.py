@@ -391,8 +391,7 @@ class Robot:
     @property
     def color(self) -> Color:
         """The current colour at the CS"""
-        return self._cs.color # type: ignore
-
+        return Color(self._cs.color)
 
     @property
     def tile_type(self) -> TileType:

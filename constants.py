@@ -108,7 +108,11 @@ UNHARMED_VICTIM_COLOR = Color.GREEN
 # SLEEP
 WAIT_TIME_MS = 150
 # BUTTONS
-BUTTON_POLL_INTERVAL = 300
+BUTTON_POLL_INTERVAL_MS = 300
+# Drive wall
+DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
+# Tile type
+TILE_TYPE_POLL_INTERVAL_MS = 100 # how often to read from CS
 
 
 # MAZE:
@@ -135,7 +139,6 @@ STEP_5_A_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see docstring. either 1/2 or 1/
 ADVANCE_MVT_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see robot.advance(). similar to above
 
 # drive until hit wall:
-DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
 DRIVE_WALL_MAX_DISTANCE = 2 * TILE_WIDTH # worst case, if stop condition never met
 DRIVE_WALL_EXTRA_DISTANCE = 10 # TODO - extra distance to ensure heading is aligned
 
