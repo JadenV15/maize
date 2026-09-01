@@ -7,16 +7,6 @@ from ev3dev2.led import Leds
 from constants import *
 from utils import wait
 
-__all__ = [
-    'indicate_fuck_up',
-    'indicate_start',
-    'indicate_nogo_tile',
-    'indicate_harmed_victim',
-    'indicate_unharmed_victim',
-    'indicate_finish',
-    'indicate_final_counts'
-]
-
 
 # Helpers
 
@@ -84,4 +74,6 @@ def indicate_final_counts(statistics: Dict[TileType, int]):
     print(statistics)
     ...
 
+
+__all__ = [name for name in globals() if name.startswith('indicate')]
 
