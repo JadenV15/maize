@@ -3,15 +3,22 @@
 from typing import Dict
 
 from ev3dev2.led import Leds
+from ev3dev2.sound import Sound
 
 from constants import *
 from utils import wait
 
 
+sound = Sound()
+
+leds = Leds()
+
+
 # Helpers
 
 
-leds = Leds()
+def start_beep():
+    sound.play_tone(frequency=1000, duration=500, play_type=Sound.PLAY_NO_WAIT_FOR_COMPLETE)
 
 
 def set_color(color: str):
@@ -20,7 +27,7 @@ def set_color(color: str):
 
 
 def flash_color(color: str, time_ms: int):
-    leds.animate_flash(color, sleeptime=LED_FLASH_INTERVAL_MS / 1000, duration=int(time_ms / 1000), block=True)
+    leds.animate_flash(color, sleeptime=200 / 1000, duration=int(time_ms / 1000), block=True)
 
 
 def clear_color():
@@ -31,12 +38,13 @@ def clear_color():
 
 def indicate_fuck_up():
     """Indicate (with a bunch of flashing lights and sounds) that the robot has been FUBAR"""
-    print('something went wrong')
+    print('something went wrong') # TODO
     raise Exception
 
 
 def indicate_start():
     """Pause for 1 second, indicating that the robot is starting"""
+    start_beep()
     set_color(LED_START_COLOR)
     wait(1000)
     clear_color()
@@ -44,6 +52,7 @@ def indicate_start():
 
 def indicate_nogo_tile():
     """Pause for 1 second, indicating that the robot has hit a black tile and will be reversing"""
+    start_beep()
     set_color(LED_NOGO_COLOR)
     wait(1000)
     clear_color()
@@ -51,18 +60,21 @@ def indicate_nogo_tile():
 
 def indicate_harmed_victim():
     """Pause for 1 second, indicating that the robot has discovered a red victim"""
+    start_beep()
     flash_color(LED_HARMED_COLOR, 1000)
     clear_color()
 
 
 def indicate_unharmed_victim():
     """Pause for 1 second, indicating the robot has discovered a green victim"""
+    start_beep()
     flash_color(LED_UNHARMED_COLOR, 1000)
     clear_color()
 
 
 def indicate_finish():
     """Pause for 1 second, indicating that the robot has finished"""
+    start_beep()
     set_color(LED_FINISH_COLOR)
     wait(1000)
     clear_color()
@@ -75,5 +87,5 @@ def indicate_final_counts(statistics: Dict[TileType, int]):
     ...
 
 
-__all__ = [name for name in globals() if name.startswith('indicate')]
+__all__ = [name for name in globals() if name.startswith('indicate')] # type: ignore
 
