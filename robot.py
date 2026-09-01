@@ -58,8 +58,8 @@ class Robot:
 
         # dual touch sensors
         self._ts_map = {
-            Direction.WEST: (LEFT_TS_ENDPOINT, TouchSensor(LEFT_TS_PIN)),
-            Direction.EAST: (RIGHT_TS_ENDPOINT, TouchSensor(RIGHT_TS_PIN))
+            Direction.WEST: TouchSensor(LEFT_TS_PIN),
+            Direction.EAST: TouchSensor(RIGHT_TS_PIN)
         }
 
 
@@ -424,10 +424,11 @@ class Robot:
 
     def is_touching_rel_direction(self, direction: Direction) -> bool: # relative direction
         """Check whether the robot has been touched (pressed) on <direction> side"""
-        return bool(self._ts_map[direction][1].is_pressed)
+        return bool(self._ts_map[direction].is_pressed)
 
 
-    def get_touching_rel_points(self) -> List[Point]:
+    def get_touching_rel_directions(self) -> List[Direction]:
         """Get a list of all currently touched points"""
-        return [point for point, touch in self._ts_map.values() if touch.is_pressed]
+        return [direction for direction, touch in self._ts_map.items() if touch.is_pressed]
+
 

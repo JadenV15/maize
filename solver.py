@@ -4,6 +4,8 @@ import math
 import time
 from typing import Optional
 
+from shapely.geometry import Point
+
 from constants import *
 from utils import *
 
@@ -231,7 +233,7 @@ class Solver:
                 neighbour.visited = True
 
                 # mark tile as black
-                self._map.mark_black(neighbour)
+                self._map.mark_nogo(neighbour)
 
                 continue
 
@@ -334,7 +336,7 @@ class Solver:
             wait()
 
             if self._is_nogo:
-                indicate_black_tile()
+                indicate_nogo_tile()
                 self._robot.drive(ADVANCE_A_DISTANCE, forward=False)
                 raise BlackTileError
 
@@ -595,7 +597,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             # do everything backwards to return to initial position
             self._step_3(inverse=True)
             wait()
@@ -608,7 +610,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             # do everything backwards to return to initial position
             self._step_4(inverse=True)
             wait()
@@ -623,7 +625,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             # do everything backwards to return to initial position
             self._step_5_a(inverse=True)
             wait()
@@ -653,7 +655,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             self._step_3(inverse=True)
             wait()
             self._step_2()
@@ -666,7 +668,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             self._step_4()
             wait()
             self._step_3(inverse=True)
@@ -680,7 +682,7 @@ class Solver:
         wait()
 
         if handle_nogo_tiles and self._is_nogo:
-            indicate_black_tile()
+            indicate_nogo_tile()
             self._step_5_a(inverse=True)
             wait()
             self._step_4()

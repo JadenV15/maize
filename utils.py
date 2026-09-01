@@ -14,11 +14,11 @@ __all__ = [
 ]
 
 
-def wait(time_ms: Numeric = WAIT_TIME_MS):
+def wait(time_ms: Numeric = WAIT_TIME_MS, check_pressed: bool = True):
     """Sleep a short amount of time between movements, to prevent jamming. Also check if exit requested (via button press)"""
     time.sleep(time_ms / 1000)
 
-    if backspace_pressed():
+    if check_pressed and backspace_pressed():
         raise ExitRequestedError
 
 

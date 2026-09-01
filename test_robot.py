@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from shapely.geometry import Point
+
 from constants import *
 from utils import *
 

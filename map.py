@@ -245,7 +245,7 @@ class Map:
         self._edges = [edge for edge in self._edges if not edge.has(a, b)]
 
 
-    def mark_black(self, tile: Tile):
+    def mark_nogo(self, tile: Tile):
         """Call this when the robot detects that a tile is black.
         We change the tile's `tile_type` to black, and remove all edges (open paths) containing this tile
         """

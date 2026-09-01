@@ -1,39 +1,45 @@
 #!/usr/bin/env python3
 
-from typing import Union
-from enum import Enum, IntEnum
+# i hate this underscore convention. maybe python should have js-style exports?
+from typing import Union as _Union
+from enum import Enum as _Enum, IntEnum as _IntEnum
 
-from shapely.geometry import Point
+from shapely.geometry import Point as _Point
 
-from ev3dev2.wheel import Wheel, EV3Tire # PART NUMBER 44309
+from ev3dev2.wheel import EV3Tire as _EV3Tire # PART NUMBER 44309
 from ev3dev2.motor import (
     Motor,
-    OUTPUT_A,
-    OUTPUT_B,
-    OUTPUT_C,
-    OUTPUT_D
+    OUTPUT_A as _A,
+    OUTPUT_B as _B,
+    OUTPUT_C as _C,
+    OUTPUT_D as _D
 )
 from ev3dev2.sensor import (
-    INPUT_1,
-    INPUT_2,
-    INPUT_3,
-    INPUT_4
+    INPUT_1 as _1,
+    INPUT_2 as _2,
+    INPUT_3 as _3,
+    INPUT_4 as _4
 )
 
-# tyoe hints
-
-Numeric = Union[int, float] # type hint any number
 
 
-# exc
+# ==== TYPING ====
+
+Numeric = _Union[int, float]
+
+
+
+# ==== EXCEPTIONS ====
+
 class ExitRequestedError(Exception):
-    """The Robot Handler has pressed a button requesting to terminate the program"""
+    """The Robot Handler requests to terminate the program"""
     pass
 
 
-# enums
 
-class Direction(IntEnum):
+# ==== ENUMS ====
+
+class Direction(_IntEnum):
     """The four cardinal directions, whose values correspond to clockwise rotation relative to the positive y-axis"""
     NORTH = 0
     EAST = 90
@@ -62,15 +68,14 @@ class Direction(IntEnum):
         )
 
 
-class Speed(IntEnum):
+class Speed(_IntEnum):
     """Different motor speeds, to be used with SpeedPercent"""
     SLOW = 10
     MEDIUM = 25
     FAST = 40
 
 
-# Copied from source
-class Color(IntEnum):
+class Color(_IntEnum):
     """The different colour values returned by ev3"""
     NONE = 0
     BLACK = 1
@@ -82,7 +87,7 @@ class Color(IntEnum):
     BROWN = 7
 
 
-class TileType(Enum):
+class TileType(_Enum):
     """Types of tile surfaces. These members are all mutually exclusive
     Start: silver reflective tile (with no victim)
     Normal: white tile (with no victim)
@@ -97,41 +102,75 @@ class TileType(Enum):
     UNHARMED_VICTIM = 4
 
 
-# this is because my table at home is black. remember to switch these back on comp day TODO
+
+# ==== MAZE ====
+
+# TODO: revert to original. this only for testing on my table
 NORMAL_TILE_COLOR = Color.BLACK # Color.WHITE
 NOGO_TILE_COLOR = Color.WHITE # Color.BLACK
-
 HARMED_VICTIM_COLOR = Color.RED
 UNHARMED_VICTIM_COLOR = Color.GREEN
 
+# to calibrate
 
-# SLEEP
-WAIT_TIME_MS = 150
-# BUTTONS
-BUTTON_POLL_INTERVAL_MS = 300
-# Drive wall
-DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
-# Tile type
-TILE_TYPE_POLL_INTERVAL_MS = 100 # how often to read from CS
-
-
-# MAZE:
-
-TILE_WIDTH = 290
+TILE_WIDTH = 290 # +/- 15%
 VICTIM_WIDTH = 50
 
 TILE_HALF_WIDTH = TILE_WIDTH / 2
 
 
-# ROBOT CALIBRATION
-# TODO
 
+# ==== ROBOT ====
 
-WHEEL_ROTATION_RATIO = 1 / 1 # what i coded it to rotate divided by what it actually rotated by
-WHEEL_DRIVING_RATIO = 150 / 142 # what i coded it to move forward divided by what it actually travelled
+# TODO: finalise measurements
+ROBOT_WIDTH = 135
+ROBOT_HEIGHT = 182
+
+# to calibrate
+
+WHEEL_ROTATION_RATIO = 1 / 1 # programmed : actual
+WHEEL_DRIVING_RATIO = 150 / 142 # programmed : actual
 US_NINETY_DEGREES = 99 # TODO
 
-# robot movements:
+DEFAULT_STRAIGHT_SPEED = Speed.MEDIUM
+DEFAULT_TURNING_SPEED = Speed.SLOW
+US_MOTOR_SPEED = Speed.MEDIUM
+
+WHEEL_MIDPOINT_GAP = 98 # measured: 88
+
+MAX_WALL_DETECTION_DISTANCE = TILE_HALF_WIDTH + 30 # buffer
+
+REFLECTED_LIGHT_THRESHOLD = 75 # silver >= this
+
+# config
+
+LEFT_WHEEL_PIN = _A
+RIGHT_WHEEL_PIN = _D
+WHEEL_TYPE = _EV3Tire
+WHEEL_MIDPOINT_GAP_MIDPOINT = _Point(0, -28)
+WHEEL_POLARITY = Motor.POLARITY_NORMAL
+
+US_PIN = _3
+US_MOTOR_PIN = _B
+US_MOTOR_MIDPOINT = _Point(0, -52)
+US_MOTOR_POLARITY = Motor.POLARITY_NORMAL
+
+CS_PIN = _4
+CS_MIDPOINT = _Point(0, 0) # the robot origin
+
+LEFT_TS_PIN = _1
+RIGHT_TS_PIN = _2
+
+DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN = CS_MIDPOINT.distance(WHEEL_MIDPOINT_GAP_MIDPOINT)
+
+
+
+# ==== ROBOT MOVEMENT ====
+
+# to calibrate
+
+WAIT_TIME_MS = 100
+
 NOGO_DETECTION_BUFFER = 40 # buffer
 
 ADVANCE_A_DISTANCE = TILE_HALF_WIDTH + NOGO_DETECTION_BUFFER
@@ -144,58 +183,30 @@ STEP_5_DISTANCE = 140
 STEP_5_A_DISTANCE = STEP_5_DISTANCE - TILE_HALF_WIDTH + NOGO_DETECTION_BUFFER
 STEP_5_B_DISTANCE = TILE_HALF_WIDTH - NOGO_DETECTION_BUFFER
 
-# drive until hit wall:
+# config
+
 DRIVE_WALL_MAX_DISTANCE = 2 * TILE_WIDTH # worst case, if stop condition never met
-DRIVE_WALL_EXTRA_DISTANCE = 8 # TODO - extra distance to ensure heading is aligned
+DRIVE_WALL_EXTRA_DISTANCE = 8 # extra distance to try to align heading
+DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
 
-# ROBOT:
-# all coordinates are relative to the robot origin
 
-# TODO: appropriate default speeds
-DEFAULT_STRAIGHT_SPEED = Speed.MEDIUM
-DEFAULT_TURNING_SPEED = Speed.SLOW
 
-# TODO: finalise measurements
-ROBOT_WIDTH = 135
-ROBOT_HEIGHT = 182
+# ==== INDICATION / ANNOUNCEMENT ====
 
-LEFT_WHEEL_PIN = OUTPUT_A
-RIGHT_WHEEL_PIN = OUTPUT_D
-WHEEL_TYPE = EV3Tire
-WHEEL_MIDPOINT_GAP = 98 # measured: 88 # TODO
-WHEEL_MIDPOINT_GAP_MIDPOINT = Point(0, -28)
-WHEEL_POLARITY = Motor.POLARITY_NORMAL
+LED_BRIGHTNESS = 100 # percent
+LED_FLASH_INTERVAL_MS = 200
 
-US_PIN = INPUT_3
-US_MOTOR_PIN = OUTPUT_B
-US_MOTOR_MIDPOINT = Point(0, -52)
-US_MOTOR_POLARITY = Motor.POLARITY_NORMAL
-US_MOTOR_SPEED = Speed.MEDIUM # TODO
+LED_START_COLOR = 'YELLOW'
+LED_NOGO_COLOR = 'YELLOW'
+LED_HARMED_COLOR = 'RED'
+LED_UNHARMED_COLOR = 'GREEN'
+LED_FINISH_COLOR = 'YELLOW'
 
-CS_PIN = INPUT_4
-CS_MIDPOINT = Point(0, 0) # technically 'ctrpoint'
 
-LEFT_TS_PIN = INPUT_1
-LEFT_TS_ENDPOINT = Point(- ROBOT_WIDTH / 2, - ROBOT_HEIGHT + 28)
-RIGHT_TS_PIN = INPUT_2
-RIGHT_TS_ENDPOINT = Point(ROBOT_WIDTH / 2, - ROBOT_HEIGHT + 28)
 
-DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN = CS_MIDPOINT.distance(WHEEL_MIDPOINT_GAP_MIDPOINT)
+# ==== BUTTONS ==== #
 
-# used for wall detection
-MAX_WALL_DETECTION_DISTANCE = TILE_HALF_WIDTH + 30 # TODO - added a buffer
-'''
-|‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾|   T
-|               |   | ← this distance
-|   ____.____   |   ⊥
-|  |         |  |
-|  |         |  |
-|__|_________|__|
-   |         |
-    ‾‾‾‾‾‾‾‾‾
-If the detected distance is <= this, then there is a wall in front of the US.
-If the distance is > this, there is open space in front of US.
-'''
+BUTTON_POLL_INTERVAL_MS = 300
 
-# used for silver tile detection
-REFLECTED_LIGHT_THRESHOLD = 75
+
+__all__ = [name for name in globals() if not name.startswith('_')] # type: ignore # __all__ at the end!
