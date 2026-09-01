@@ -330,17 +330,15 @@ class Solver:
         TODO: is there enough time to calibrate?
         """
         if handle_nogo_tiles:
-            initial = TILE_HALF_WIDTH + ADVANCE_MVT_DISTANCE
-            self._robot.drive(initial)
+            self._robot.drive(ADVANCE_A_DISTANCE)
             wait()
 
             if self._is_nogo:
                 indicate_black_tile()
-                self._robot.drive(initial, forward=False)
+                self._robot.drive(ADVANCE_A_DISTANCE, forward=False)
                 raise BlackTileError
 
-            final = TILE_HALF_WIDTH - ADVANCE_MVT_DISTANCE
-            self._robot.drive(final)
+            self._robot.drive(ADVANCE_B_DISTANCE)
 
         else:
             self._robot.drive(TILE_WIDTH)
@@ -424,25 +422,21 @@ class Solver:
         +----(0, 1)-----+
         |               |
         |               |
-        |    +--@--+    |  T            T
-        |    |     |    |  |            |
-        |    |     |    |  | backwards  |
-        +----|     |----+  | distance   |
-        |  ↓ +-----+ ↓  |  |            | 1.5x tile height
-        |  ↓ +-----+ ↓  |  +            |
-        |    |  @  |    |  |            |
-        |    |     |    |  | robot height
-        |    |     |    |  |            |
-        +----+--!--+----+  ⊥            ⊥
+        |    +--@--+    |  T
+        |    |     |    |  | backwards
+        |    |     | ↓  |  | distance (half tile width)
+        +---+|----+|-↓--+  ⊥
+        |   |+----|+ ↓  |
+        |   |     |  ↓  |
+        |   |     |  ↓  |
+        |   + ----+     |
+        |               |
+        +----+--!--+----+
         '''
-
-        # estimate
-        distance = TILE_WIDTH + TILE_HALF_WIDTH - ROBOT_HEIGHT
-
         if not inverse:
-            self._robot.drive(distance, forward=False)
+            self._robot.drive(TILE_HALF_WIDTH, forward=False)
         else:
-            self._robot.drive(distance)
+            self._robot.drive(TILE_HALF_WIDTH)
 
 
     def _step_2(self, inverse=False):
@@ -454,18 +448,15 @@ class Solver:
         |       @       |
         |               |
         |               |
-        +----(0, 0)-----+
-        |               |
-        |    +-----+    |
-        |   /|  @ /|    |
+        +----+-----+----+
+        |   /|    /|    |
         |  / |   / |    |
         | /  |  /  |    |
-        ++---+-+---+----+
-        ⤶     ⤶
+        |+---+-+---+    |
+        |  ⤶     ⤶      |
+        +---------------+
         '''
-
         if not inverse:
-            # rotate CLOCKWISE
             self._robot.turn_by(STEP_2_ROTATION)
         else:
             self._robot.turn_by(STEP_2_ROTATION, clockwise=False)
@@ -480,24 +471,22 @@ class Solver:
         |         +-----+               |
         |        /     /|               |
         |       /     / |  ↑            |
-        +------/-----/--+--↑------------+
-        |     +-----+   |  ↑
-        |    +-----+    |  ↑
+        +-----+/----+/--+--↑------------+
+        |    /+----/+   |  ↑
         |   /     /     |  ↑
         |  /     /      |  ↑
-        | /     /       |
-        ++-----+--------+
+        | +-----+       |  ↑
+        |               |
+        +---------------+
         '''
         # TODO: to avoid snagging the US on the sensor
         # we rotate it rel North
         # but is this necessary?
         self._robot.us_turn_to(Direction.NORTH)
-
-        distance = STEP_3_DISTANCE
         if not inverse:
-            self._robot.drive(distance)
+            self._robot.drive(STEP_3_DISTANCE)
         else:
-            self._robot.drive(distance, forward=False)
+            self._robot.drive(STEP_3_DISTANCE, forward=False)
 
 
     def _step_4(self, inverse=False):
@@ -523,15 +512,10 @@ class Solver:
         half tile width
             + adjacent
         '''
-
-        # calculate based on previous angle
-        angle = 90 - STEP_2_ROTATION
-
         if not inverse:
-            # turn CLOCKWISE
-            self._robot.turn_by(angle)
+            self._robot.turn_by(STEP_4_ROTATION)
         else:
-            self._robot.turn_by(angle, clockwise=False)
+            self._robot.turn_by(STEP_4_ROTATION, clockwise=False)
 
 
     def _step_5(self, inverse=False):
@@ -541,7 +525,7 @@ class Solver:
         +----(0, 0)-----+----(1, 0)-----+
         |           → → |               |
         | +---------+ +---------+       |
-    # ← | |     @ $ % |         @       |
+        | |     @ $ % |         @       |
         | +---------+ +---------+       |
         |           → → |               |
         +---------------+---------------+
@@ -552,18 +536,10 @@ class Solver:
         |               |
         +----(0,-1)-----+
         '''
-
-        # origin is labelled '%' in diagram
-        origin_distance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
-
-        # distance between origin and desired origin
-        # i.e. distance between '%' and rightmost '@'
-        distance = TILE_WIDTH + TILE_HALF_WIDTH - origin_distance_from_left_wall
-
         if not inverse:
-            self._robot.drive(distance)
+            self._robot.drive(STEP_5_DISTANCE)
         else:
-            self._robot.drive(distance, forward=False)
+            self._robot.drive(STEP_5_DISTANCE, forward=False)
 
 
     # if we split _step_5 into two forward movements, we get _step_5_a and _step_5_b.
@@ -586,27 +562,23 @@ class Solver:
         |       | |     |       |
         +-------|-+     |       |
                 <=>
-            this length
-           is in constants.py
+              length
+
         Too small, and you risk not getting into tile (1, 0) at all
         Too big, and you risk getting more than 50% the robot into tile (1, 0), which is not good according to the rules
         """
-        origin_distance_from_left_wall = TILE_HALF_WIDTH + STEP_5_DISTANCE
-        distance = TILE_WIDTH + STEP_5_A_DISTANCE - origin_distance_from_left_wall
-
         if not inverse:
-            self._robot.drive(distance)
+            self._robot.drive(STEP_5_A_DISTANCE)
         else:
-            self._robot.drive(distance, forward=False)
+            self._robot.drive(STEP_5_A_DISTANCE, forward=False)
 
 
     def _step_5_b(self, inverse=False):
         """See previous docstrings. (when inverse=False) This drives the remaining distance to next tile's origin"""
-        distance = TILE_HALF_WIDTH - STEP_5_A_DISTANCE
         if not inverse:
-            self._robot.drive(distance)
+            self._robot.drive(STEP_5_B_DISTANCE)
         else:
-            self._robot.drive(distance, forward=False)
+            self._robot.drive(STEP_5_B_DISTANCE, forward=False)
 
 
     def advance_right(self, handle_nogo_tiles: bool = True, calibrate: bool = True):

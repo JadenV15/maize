@@ -148,10 +148,6 @@ class SolverTester:
     # basic tests
 
 
-    def test_initial_solve(self):
-        self._solver.solve(test_initial_only=True)
-
-
     def test_advance(self):
         self._solver.advance(self.test_nogo_tiles, self.test_calibration)
         self._robot.log()

@@ -127,16 +127,22 @@ TILE_HALF_WIDTH = TILE_WIDTH / 2
 # TODO
 
 
-WHEEL_ROTATION_RATIO = 1 # what i coded it to rotate divided by what it actually rotated by
+WHEEL_ROTATION_RATIO = 55 / 53 # what i coded it to rotate divided by what it actually rotated by
 WHEEL_DRIVING_RATIO = 150 / 142 # what i coded it to move forward divided by what it actually travelled
 US_NINETY_DEGREES = 99 # TODO
 
 # robot movements:
+NOGO_DETECTION_BUFFER = 40 # buffer
+
+ADVANCE_A_DISTANCE = TILE_HALF_WIDTH + NOGO_DETECTION_BUFFER
+ADVANCE_B_DISTANCE = TILE_HALF_WIDTH - NOGO_DETECTION_BUFFER
+
 STEP_2_ROTATION = 35
-STEP_3_DISTANCE = 340 # diagonal distance
-STEP_5_DISTANCE = 205 # extra distance from half-width. increase this to shorten step 5 distance
-STEP_5_A_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see docstring. either 1/2 or 1/3, I think.
-ADVANCE_MVT_DISTANCE = TILE_HALF_WIDTH / 2 # TODO - see robot.advance(). similar to above
+STEP_3_DISTANCE = 210
+STEP_4_ROTATION = 90 - STEP_2_ROTATION
+STEP_5_DISTANCE = 140
+STEP_5_A_DISTANCE = STEP_5_DISTANCE - TILE_HALF_WIDTH + NOGO_DETECTION_BUFFER
+STEP_5_B_DISTANCE = TILE_HALF_WIDTH - NOGO_DETECTION_BUFFER
 
 # drive until hit wall:
 DRIVE_WALL_MAX_DISTANCE = 2 * TILE_WIDTH # worst case, if stop condition never met
