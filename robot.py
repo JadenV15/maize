@@ -427,8 +427,9 @@ class Robot:
         return bool(self._ts_map[direction].is_pressed)
 
 
-    def get_touching_rel_directions(self) -> List[Direction]:
-        """Get a list of all currently touched points"""
+    @property
+    def touching_rel_directions(self) -> List[Direction]:
+        """List of all currently touched rel directions"""
         return [direction for direction, touch in self._ts_map.items() if touch.is_pressed]
 
 

@@ -18,7 +18,7 @@ leds = Leds()
 
 
 def start_beep():
-    sound.play_tone(frequency=1000, duration=500, play_type=Sound.PLAY_NO_WAIT_FOR_COMPLETE)
+    sound.play_tone(frequency=1000, duration=500 / 1000, play_type=Sound.PLAY_NO_WAIT_FOR_COMPLETE)
 
 
 def set_color(color: str):

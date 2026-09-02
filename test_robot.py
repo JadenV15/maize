@@ -21,6 +21,8 @@ class RobotTester:
     def __init__(self, robot: Robot):
         self._robot = robot
 
+        self.calibrate_to_zero()
+
 
     def calibrate_to_north(self):
         self._robot.heading = 0
@@ -114,6 +116,8 @@ class SolverTester:
         self._robot = solver._robot
         self._map = solver._map
 
+        self.calibrate_to_zero()
+
     def calibrate_to_direction(self, direction: Direction):
         self._robot.heading = direction
 
@@ -165,23 +169,23 @@ class SolverTester:
         self._robot.log()
 
 
-    def test_backtrack_left(self):
-        self._solver.backtrack_left()
+    def test_backtrack_left(self, test_calibration=False):
+        self._solver.backtrack_left(test_calibration)
         self._robot.log()
 
 
-    def test_backtrack_right(self):
-        self._solver.backtrack_right()
+    def test_backtrack_right(self, test_calibration=False):
+        self._solver.backtrack_right(test_calibration)
         self._robot.log()
 
 
-    def test_drive_forward_until_us_stable(self):
-        self._solver.drive_until_us_stable()
+    def test_drive_forward_wall(self):
+        self._solver.drive_forward_until_not_moving()
         self._robot.log()
 
 
-    def test_drive_backward_until_us_stable(self):
-        self._solver.drive_until_us_stable(forward=False)
+    def test_drive_backward_wall(self):
+        self._solver.drive_backward_until_not_moving()
         self._robot.log()
 
 
@@ -198,9 +202,9 @@ if __name__ == '__main__':
         map = Map()
         '''
              +----+
-             |    |
-        +----+----+----+
-        |    |    |    |
+        wall |    |
+        +-|--+----+----+
+        | |==|    |    |
         +----+----+----+
              |    | ← (0,0) current tile
              +----+
@@ -208,6 +212,8 @@ if __name__ == '__main__':
         current_tile = Tile(Point(0, 0))
         map.add_tile(current_tile)
         north_tile = map.create_tile_by_direction(current_tile, Direction.NORTH)
+        #north_tile_west_wall = map.create_wall_by_direction(north_tile, Direction.WEST)
+        north_tile_east_wall = map.create_wall_by_direction(north_tile, Direction.EAST)
         north_east_tile = map.create_tile_by_direction(north_tile, Direction.EAST)
         north_west_tile = map.create_tile_by_direction(north_tile, Direction.WEST)
         north_north_tile = map.create_tile_by_direction(north_tile, Direction.NORTH)

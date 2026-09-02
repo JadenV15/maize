@@ -16,7 +16,7 @@ from indicate import *
 __all__ = ['Solver']
 
 
-class BlackTileError(Exception):
+class NogoTileError(Exception):
     """The robot has detected a black tile while executing a MovementType.
     The robot has moved back to the last position.
     """
@@ -228,7 +228,7 @@ class Solver:
 
                 wait()
 
-            except BlackTileError:
+            except NogoTileError:
                 # we are back exactly where we started (`tile`)
                 self._current_tile = tile
 
@@ -247,7 +247,6 @@ class Solver:
     # on the current tile's origin
     # and each movement should (try to) move the robot
     # so that the origin is EXACTLY on the target tile's origin
-    # (^^^ TODO - calibration)
 
     
     @property
@@ -258,22 +257,18 @@ class Solver:
         return self._robot.tile_type == TileType.NOGO
 
 
-    # i actually hate this style of indentation
-    def drive_until_us_stable(self,
-                              min_distance: Optional[Numeric] = None,
-                              calibrate_origin: Optional[Point] = None,
-                              forward: bool = True,
-                              speed: Speed = DEFAULT_STRAIGHT_SPEED):
-        """Keep driving until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE). Then calibrate the robot origin to <calibrate_origin>
-        Use this to drive until hit wall
+    def drive_forward_until_not_moving(self, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+        """Keep driving forward until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE).
+        Use this to drive forward until hit wall
         NOTE: US must be facing a wall (and the wall must be within range) for this to work
+        NOTE: Remember to calibrate position after this!
         """
-        # TODO: for now don't call this with min_distance, because this could mask bugs
+        self._robot.us_turn_to(Direction.NORTH)
 
         last_reading = self._robot.us_distance
 
         # start driving
-        with self._robot.driving(forward, speed) as distance:
+        with self._robot.driving(speed=speed) as distance:
             wait(DRIVE_WALL_POLL_INTERVAL_MS) # TODO - just in case the motors don't start immediately
 
             while True:
@@ -289,22 +284,55 @@ class Solver:
                     break
                 last_reading = current_reading
 
-        if min_distance is not None:
-            delta = min_distance - distance.value
-            if delta > 0:
-                # we are less than min_distance
-                self._robot.drive(delta, forward, speed)
-
         # extra distance (robot is already at the wall, this just hopefully corrects the heading by ramming against the wall)
         # no need to do wait() because we are driving in one direction near-continuously
-        self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward, speed)
+        self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, speed=speed)
 
         # right now the odometry is all messed up
         # because the wheels have been spinning while slipping, and the robot not moving
-        # so we calibrate to the expected origin position
-        # if provided
-        if calibrate_origin is not None:
-            self._robot.origin = calibrate_origin
+        # so the caller should calibrate to the expected origin position
+
+
+    def drive_backward_until_not_moving(self, speed: Speed = DEFAULT_STRAIGHT_SPEED):
+        """Keep driving backwards (and rotating slightly) until both TS activate
+        Use this to drive backward until hit wall
+        NOTE: Remember to calibrate position after this!
+        """
+        with self._robot.driving(forward=False, speed=speed) as distance:
+            while True:
+                if self._robot.touching_rel_directions or distance.value >= DRIVE_WALL_MAX_DISTANCE:
+                    # break if at least one is touching
+                    break
+                wait(DRIVE_WALL_POLL_INTERVAL_MS)
+
+        if len(self._robot.touching_rel_directions) == 2:
+            # fully aligned
+            self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward=False, speed=speed)
+            return
+
+        # these are too unimportant to be constants (?)
+        small_angle = 3
+        small_distance = 5 # mm
+        max_corrections = 5
+
+        corrections = 0
+        while True:
+            if corrections == max_corrections:
+                # could be stuck, just return at this point
+                break
+            corrections += 1
+
+            if len(self._robot.touching_rel_directions) == 2:
+                return # extra distance probably unnecessary
+
+            if self._robot.is_touching_rel_direction(Direction.EAST):
+                # don't use given speed here, as deltas are very small
+                self._robot.turn_by(small_angle, clockwise=False)
+                self._robot.drive(small_distance, forward=False)
+
+            elif self._robot.is_touching_rel_direction(Direction.WEST):
+                self._robot.turn_by(small_angle)
+                self._robot.drive(small_distance, forward=False)
 
 
     # first, the simple ones
@@ -340,7 +368,7 @@ class Solver:
             if self._is_nogo:
                 indicate_nogo_tile()
                 self._robot.drive(ADVANCE_A_DISTANCE, forward=False)
-                raise BlackTileError
+                raise NogoTileError
 
             self._robot.drive(ADVANCE_B_DISTANCE)
 
@@ -370,12 +398,9 @@ class Solver:
             # we can move forward and calibrate
             wait()
 
-            # since the US is already pointing relative North,
-            # we can call drive_until_us_stable
-            # and move forward until we hit the wall
-            self.drive_until_us_stable(calibrate_origin=shift(
-                current_tile.origin, global_direction, TILE_HALF_WIDTH
-            ))
+            # move forward until we hit the wall
+            self.drive_forward_until_not_moving()
+
             wait()
 
             # now move back
@@ -391,8 +416,7 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume both tiles have already been explored
         """
-        # NO CALIBRATION - TODO?
-
+        # NO CALIBRATION
         self._robot.drive(TILE_WIDTH, forward=False)
 
 
@@ -418,14 +442,14 @@ class Solver:
 
 
     def _turn_step_1(self, inverse=False):
-        '''
+        """
         1) Move backwards
         +----(0, 1)-----+
         |               |
         |               |
         |    +--@--+    |  T
         |    |     |    |  | backwards
-        |    |     | ↓  |  | distance (half tile width)
+        |    |     | ↓  |  | distance
         +---+|----+|-↓--+  ⊥
         |   |+----|+ ↓  |
         |   |     |  ↓  |
@@ -433,7 +457,7 @@ class Solver:
         |   + ----+     |
         |               |
         +----+--!--+----+
-        '''
+        """
         if not inverse:
             self._robot.drive(TILE_HALF_WIDTH, forward=False)
         else:
@@ -441,7 +465,7 @@ class Solver:
 
 
     def _turn_step_2(self, inverse=False):
-        '''
+        """
         2) Rotate to the left
         +----(0, 1)-----+
         |               |
@@ -456,7 +480,7 @@ class Solver:
         |+---+-+---+    |
         |  ⤶     ⤶      |
         +---------------+
-        '''
+        """
         if not inverse:
             self._robot.turn_by(STEP_2_ROTATION)
         else:
@@ -464,7 +488,7 @@ class Solver:
 
 
     def _turn_step_3(self, inverse=False):
-        '''
+        """
         3) Move forward diagonally
         +----(0, 1)-----+----(1, 0)-----+
         |               |               |
@@ -479,11 +503,7 @@ class Solver:
         | +-----+       |  ↑
         |               |
         +---------------+
-        '''
-        # TODO: to avoid snagging the US on the sensor
-        # we rotate it rel North
-        # but is this necessary?
-        self._robot.us_turn_to(Direction.NORTH)
+        """
         if not inverse:
             self._robot.drive(STEP_3_DISTANCE)
         else:
@@ -491,7 +511,7 @@ class Solver:
 
 
     def _turn_step_4(self, inverse=False):
-        '''
+        """
         4) Rotate to horizontal
         (closeup diagram)
         We rotate about the turning origin until the robot is aligned
@@ -508,21 +528,88 @@ class Solver:
         |    ↖      /         /   |
         |      ↖   /         /    |
         +---------+---------+-----+
-
         <----------------->$
         half tile width
             + adjacent
-        '''
+        """
         if not inverse:
             self._robot.turn_by(STEP_4_ROTATION)
         else:
             self._robot.turn_by(STEP_4_ROTATION, clockwise=False)
 
 
-    def _turn_step_5(self, inverse=False):
-        '''
+    def _turn_step_5_no_calibrate(self, inverse=False, raise_if_nogo=True):
+        """Internal helper for calibrate=False case
+        No inverse:
+
+        +----(0, 0)-----+----(1, 0)-----+
+        |       |       |               |
+        | +-----+---+-----+             |
+        | |     |   |   | |             |
+        | +-----+---+-----+             |
+        |      →|→ → →  |               |
+        +-------|-------+---------------+
+              centre
+                <--->
+            STEP_5_DISTANCE
+                    <----->
+                STEP_5_A_DISTANCE
+                        <=>
+                       buffer
+        If normal:
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |               |
+        |       +-----+---+-----+       |
+        |       |     | | |     @       |
+        |       +-----+---+-----+       |
+        |            → → → →            |
+        +---------------+---------------+
+                          <----->
+                        STEP_5_B_DISTANCE
+                        <=>
+                       buffer
+
+        If black:
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |               |
+        | +-----+---+-----+             |
+        | |     |   |   | |             |
+        | +-----+---+-----+             |
+        |      ← ← ← ←  |               |
+        +---------------+---------------+
+                    <----->
+                STEP_5_A_DISTANCE
+
+        Inverse:
+
+        +----(0, 0)-----+----(1, 0)-----+
+        |               |               |
+        | +---------+ +---------+       |
+        | |         | | |       @       |
+        | +---------+ +---------+       |
+        |         ← ← ← ←               |
+        +---------------+---------------+
+                    <-----><---->
+        STEP_5_A_DISTANCE   STEP_5_B_DISTANCE
+        """
+        if not inverse:
+            self._robot.drive(STEP_5_A_DISTANCE)
+
+            if raise_if_nogo and self._is_nogo:
+                wait()
+                self._robot.drive(STEP_5_A_DISTANCE, forward=False)
+                raise NogoTileError
+
+            self._robot.drive(STEP_5_B_DISTANCE)
+
+        else:
+            distance = STEP_5_A_DISTANCE + STEP_5_B_DISTANCE
+            self._robot.drive(distance, forward=False)
+
+
+    def _turn_step_5(self, inverse=False, raise_if_nogo=True, calibrate=True):
+        """
         5) Move forward to next tile's origin
-        '#' represents the left wall
         +----(0, 0)-----+----(1, 0)-----+
         |           → → |               |
         | +---------+ +---------+       |
@@ -530,82 +617,121 @@ class Solver:
         | +---------+ +---------+       |
         |           → → |               |
         +---------------+---------------+
-        |               |
-        |               |
-        |       @       |
-        |               |
-        |               |
-        +----(0,-1)-----+
-        '''
-        if not inverse:
-            self._robot.drive(STEP_5_DISTANCE)
-        else:
-            self._robot.drive(STEP_5_DISTANCE, forward=False)
-
-
-    # if we split _step_5 into two forward movements, we get _step_5_a and _step_5_b.
-    # use the latter two if we need to check for black tile after step_5_a (or b, if inverse)
-
-
-    def _turn_step_5_a(self, inverse=False):
-        """(when inverse=False) Move just enough to bring the CS onto the tile, to check whether it's black
-        +----(0, 0)-----+----(1, 0)-----+
-        |               |       |       |
-        | +-----+---+-----+     |       |
-        | |     |   |   | |     |       |
-        | +-----+---+-----+     |       |
-        | <--------->   |       |       |
-        +------ <---------> ----|-------+
-               → → → →        centre
-
-        Relevant closeup of position after calling this function:
-        +-------|-+     |       |
-        |       | |     |       |
-        +-------|-+     |       |
-                <=>
-               buffer
-
-        Distance too small, and you risk not getting into tile (1, 0) at all
-        Too big, and you risk getting more than 50% the robot into tile (1, 0), which is not good according to the rules
         """
-        if not inverse:
-            self._robot.drive(STEP_5_A_DISTANCE)
+        if not calibrate:
+            self._turn_step_5_no_calibrate(inverse, raise_if_nogo)
+
         else:
-            self._robot.drive(STEP_5_A_DISTANCE, forward=False)
-        
+            '''
+            No inverse:
 
-    def _turn_step_5_a_with_calibrate(self, inverse=False):
-        """This is basically step 5a but with calibration.
-        If there is a wall behind, back into that wall, then move forward into the next tile.
-        If there is no wall, do step_5_a as usual.
-        +----(0, 0)-----+----(1, 0)-----+
-        |               |               |
-        +-----+---+-----+               |
-        |     |   |     |               |
-        +-----+---+-----+               |
-        |   ← ← ← ← ←   |               |
-        +---------------+---------------+
-        +----(0, 0)-----+----(1, 0)-----+
-        |               |               |
-        +-------+-+-------+             |
-        |       | |     | |             |
-        +-------+-+-------+             |
-        |       → → → → |               |
-        +---------------+---------------+
-                        <=>
-                       buffer
-        """
-        # TODO
-        self._turn_step_5_a(inverse)
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            +-+-------+-+   |               |
+            | |       | |   |               |
+            +-+-------+-+   |               |
+            |  ← ← ← ←      |               |
+            +---------------+---------------+
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            +-------+-+-------+             |
+            |       | |     | |             |
+            +-------+-+-------+             |
+            |       → → → → |               |
+            +---------------+---------------+
+                    <------><=>
+        tile width - height   buffer
+            If normal:
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            |       +-----+---+-----+       |
+            |       |     | | |     @       |
+            |       +-----+---+-----+       |
+            |            → → → →            |
+            +---------------+---------------+
+                              <----->
+                            STEP_5_B_DISTANCE
+            If black:
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            | +-----+---+-----+             |
+            | |     |   |   | |             |
+            | +-----+---+-----+             |
+            |      ← ← ← ←  |               |
+            +---------------+---------------+
+                        <----->
+                    STEP_5_A_DISTANCE
+            
+            Inverse:
 
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            +---------+   +---------+       |
+            |         |   | |       @       |
+            +---------+   +---------+       |
+            |        ← ← ← ←                |
+            +---------------+---------------+
+            +----(0, 0)-----+----(1, 0)-----+
+            |               |               |
+            +-+-------+-+   |               |
+            | |       | |   |               |
+            +-+-------+-+   |               |
+            |  → → → →      |               |
+            +---------------+---------------+
+            <=>
+            ???
+            '''
+            # calibrate only if there is a wall on the left/right (depending on `inverse`)
+            global_direction = Direction.from_heading(self._robot.heading)
+            wall_direction = global_direction.reverse() # relative 'south'
 
+            if not inverse:
+                current_tile = self._current_tile
+            else:
+                current_tile = self._map.get_tile_by_direction(
+                    self._current_tile,
+                    wall_direction,
+                    require_open=True
+                )
+                assert current_tile is not None
 
-    def _turn_step_5_b(self, inverse=False):
-        """See previous docstrings. (when inverse=False) This drives the remaining distance to next tile's origin"""
-        if not inverse:
-            self._robot.drive(STEP_5_B_DISTANCE)
-        else:
-            self._robot.drive(STEP_5_B_DISTANCE, forward=False)
+            if self._map.get_wall_by_direction(current_tile, wall_direction) is None:
+                # cannot calibrate, as no wall
+                self._turn_step_5_no_calibrate(inverse, raise_if_nogo)
+                return
+
+            if not inverse:
+                # move to back wall
+                self.drive_backward_until_not_moving()
+                wait()
+
+                # move to the connection between the tiles
+                self._robot.drive(TILE_WIDTH - ROBOT_HEIGHT)
+                # calibrate
+                self._robot.origin = shift(current_tile.origin, global_direction, TILE_HALF_WIDTH)
+
+                # move remaining buffer distance
+                self._robot.drive(NOGO_DETECTION_BUFFER)
+
+                if raise_if_nogo and self._is_nogo:
+                    wait()
+                    self._robot.drive(STEP_5_A_DISTANCE, forward=False)
+                    raise NogoTileError
+
+                # move to final
+                self._robot.drive(STEP_5_B_DISTANCE)
+
+            else:
+                # no need to consider black tiles
+                # in backtrack mode
+
+                # move to back wall
+                self.drive_backward_until_not_moving()
+                wait()
+
+                # move forward to initial
+                distance = TILE_HALF_WIDTH - (ROBOT_HEIGHT - STEP_5_DISTANCE)
+                self._robot.drive(distance)
 
 
     def advance_right(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
@@ -613,24 +739,13 @@ class Solver:
         This is movement #4 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
-        # TODO: handle calibration
         self._turn_step_1()
         wait()
         self._turn_step_2()
         wait()
         self._turn_step_3()
         wait()
-
-        if handle_nogo_tiles and self._is_nogo:
-            indicate_nogo_tile()
-            # do everything backwards to return to initial position
-            self._turn_step_3(inverse=True)
-            wait()
-            self._turn_step_2(inverse=True)
-            wait()
-            self._turn_step_1(inverse=True)
-            raise BlackTileError
-
+        # TODO: technically, if we rotate and find a black tile, we're not aloud to rotate back out of it.
         self._turn_step_4()
         wait()
 
@@ -644,22 +759,15 @@ class Solver:
             self._turn_step_2(inverse=True)
             wait()
             self._turn_step_1(inverse=True)
-            raise BlackTileError
+            raise NogoTileError
 
-        if calibrate:
-            self._turn_step_5_a_with_calibrate()
-        else:
-            self._turn_step_5_a()
-        wait()
-
-        if handle_nogo_tiles and self._is_nogo:
+        try:
+            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, calibrate=calibrate)
+        except NogoTileError:
+            # we are back to previous position
+            wait()
             indicate_nogo_tile()
             # do everything backwards to return to initial position
-            if calibrate:
-                self._turn_step_5_a_with_calibrate(inverse=True)
-            else:
-                self._turn_step_5_a(inverse=True)
-            wait()
             self._turn_step_4(inverse=True)
             wait()
             self._turn_step_3(inverse=True)
@@ -667,29 +775,7 @@ class Solver:
             self._turn_step_2(inverse=True)
             wait()
             self._turn_step_1(inverse=True)
-            raise BlackTileError
-
-        self._turn_step_5_b()
-
-        if handle_nogo_tiles and self._is_nogo:
-            wait()
-            indicate_nogo_tile()
-            # do everything backwards to return to initial position
-            self._turn_step_5_b(inverse=True)
-            wait()
-            if calibrate:
-                self._turn_step_5_a_with_calibrate(inverse=True)
-            else:
-                self._turn_step_5_a(inverse=True)
-            wait()
-            self._turn_step_4(inverse=True)
-            wait()
-            self._turn_step_3(inverse=True)
-            wait()
-            self._turn_step_2(inverse=True)
-            wait()
-            self._turn_step_1(inverse=True)
-            raise BlackTileError
+            raise # reraise
 
 
     def advance_left(self, handle_nogo_tiles: bool = True, calibrate: bool = True):
@@ -704,17 +790,6 @@ class Solver:
         wait()
         self._turn_step_3()
         wait()
-
-        if handle_nogo_tiles and self._is_nogo:
-            indicate_nogo_tile()
-            self._turn_step_3(inverse=True)
-            wait()
-            self._turn_step_2()
-            wait()
-            self._turn_step_1(inverse=True)
-            raise BlackTileError
-
-        # TODO: technically, if we rotate and find a black tile, we're not aloud to rotate back out of it.
         self._turn_step_4(inverse=True)
         wait()
 
@@ -727,21 +802,13 @@ class Solver:
             self._turn_step_2()
             wait()
             self._turn_step_1(inverse=True)
-            raise BlackTileError
+            raise NogoTileError
 
-        if calibrate:
-            self._turn_step_5_a_with_calibrate(inverse=True)
-        else:
-            self._turn_step_5_a(inverse=True)
-        wait()
-
-        if handle_nogo_tiles and self._is_nogo:
-            indicate_nogo_tile()
-            if calibrate:
-                self._turn_step_5_a_with_calibrate(inverse=True)
-            else:
-                self._turn_step_5_a(inverse=True)
+        try:
+            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, calibrate=calibrate)
+        except NogoTileError:
             wait()
+            indicate_nogo_tile()
             self._turn_step_4()
             wait()
             self._turn_step_3(inverse=True)
@@ -749,38 +816,15 @@ class Solver:
             self._turn_step_2()
             wait()
             self._turn_step_1(inverse=True)
-            raise BlackTileError
-
-        self._turn_step_5_b()
-
-        if handle_nogo_tiles and self._is_nogo:
-            wait()
-            indicate_nogo_tile()
-            # do everything backwards to return to initial position
-            self._turn_step_5_b(inverse=True)
-            wait()
-            if calibrate:
-                self._turn_step_5_a_with_calibrate(inverse=True)
-            else:
-                self._turn_step_5_a(inverse=True)
-            wait()
-            self._turn_step_4()
-            wait()
-            self._turn_step_3(inverse=True)
-            wait()
-            self._turn_step_2()
-            wait()
-            self._turn_step_1(inverse=True)
-            raise BlackTileError
 
 
-    def backtrack_right(self):
+    def backtrack_right(self, calibrate: bool = True):
         """Move backward and to the right.
         This is movement #6 in the doc.
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._turn_step_5(inverse=True)
+        self._turn_step_5(inverse=True, raise_if_nogo=False, calibrate=calibrate)
         wait()
         self._turn_step_4(inverse=True)
         wait()
@@ -791,13 +835,13 @@ class Solver:
         self._turn_step_1(inverse=True)
 
 
-    def backtrack_left(self):
+    def backtrack_left(self, calibrate: bool = True):
         """Move backward and to the left.
         This is movement #5 in the doc.
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._turn_step_5(inverse=True)
+        self._turn_step_5(inverse=True, raise_if_nogo=False, calibrate=calibrate)
         wait()
         self._turn_step_4()
         wait()
@@ -806,3 +850,7 @@ class Solver:
         self._turn_step_2()
         wait()
         self._turn_step_1(inverse=True)
+
+
+
+

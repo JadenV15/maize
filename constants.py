@@ -186,8 +186,8 @@ STEP_5_B_DISTANCE = TILE_HALF_WIDTH - NOGO_DETECTION_BUFFER
 # config
 
 DRIVE_WALL_MAX_DISTANCE = 2 * TILE_WIDTH # worst case, if stop condition never met
-DRIVE_WALL_EXTRA_DISTANCE = 8 # extra distance to try to align heading
-DRIVE_WALL_POLL_INTERVAL_MS = 100 # how often to read from US
+DRIVE_WALL_EXTRA_DISTANCE = 5 # extra distance
+DRIVE_WALL_POLL_INTERVAL_MS = 100
 
 
 
