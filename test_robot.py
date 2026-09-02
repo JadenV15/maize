@@ -98,6 +98,10 @@ class RobotTester:
         self._robot.log()
 
 
+    def test_us_lookaround(self):
+        print(self._robot.lookaround())
+
+
     def test_color(self):
         print(self._robot.color)
 

@@ -380,7 +380,9 @@ class Robot:
         else:
             raise Exception
 
-        # TODO: do we restore to NORTH?
+        # no need to restore to north.
+        # any code relying on the US being at a specific position
+        # should turn it to that position explicitly
 
         return directions
 

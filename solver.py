@@ -816,6 +816,7 @@ class Solver:
             self._turn_step_2()
             wait()
             self._turn_step_1(inverse=True)
+            raise
 
 
     def backtrack_right(self, calibrate: bool = True):
