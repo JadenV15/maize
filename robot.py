@@ -21,7 +21,7 @@ from ev3dev2.sensor.lego import (
 from constants import *
 from utils import *
 
-__all__ = ['Robot', 'Value']
+__all__ = ['Robot']
 
 
 

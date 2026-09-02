@@ -114,11 +114,6 @@ class SolverTester:
         self._robot = solver._robot
         self._map = solver._map
 
-        # tester settings
-        self.test_nogo_tiles = False
-        self.test_calibration = False
-
-
     def calibrate_to_direction(self, direction: Direction):
         self._robot.heading = direction
 
@@ -150,8 +145,8 @@ class SolverTester:
     # basic tests
 
 
-    def test_advance(self):
-        self._solver.advance(self.test_nogo_tiles, self.test_calibration)
+    def test_advance(self, test_nogo_tiles=False, test_calibration=False):
+        self._solver.advance(test_nogo_tiles, test_calibration)
         self._robot.log()
 
 
@@ -160,13 +155,13 @@ class SolverTester:
         self._robot.log()
 
 
-    def test_advance_left(self):
-        self._solver.advance_left(self.test_nogo_tiles, self.test_calibration)
+    def test_advance_left(self, test_nogo_tiles=False, test_calibration=False):
+        self._solver.advance_left(test_nogo_tiles, test_calibration)
         self._robot.log()
 
 
-    def test_advance_right(self):
-        self._solver.advance_right(self.test_nogo_tiles, self.test_calibration)
+    def test_advance_right(self, test_nogo_tiles=False, test_calibration=False):
+        self._solver.advance_right(test_nogo_tiles, test_calibration)
         self._robot.log()
 
 
