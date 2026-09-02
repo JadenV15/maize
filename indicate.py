@@ -82,9 +82,20 @@ def indicate_finish():
 
 def indicate_final_counts(statistics: Dict[TileType, int]):
     """Announce the final figures / statistics"""
-    # TODO
+    # for now:
     print(statistics)
-    ...
+
+    def announce():
+        sound.speak('{} red victims'.format(statistics[TileType.HARMED_VICTIM]))
+        wait(300)
+        sound.speak('{} green victims'.format(statistics[TileType.UNHARMED_VICTIM]))
+        wait(300)
+        sound.speak('{} black tiles'.format(statistics[TileType.NOGO]))
+
+    announce()
+    wait(1000)
+    sound.speak('Repeating')
+    announce()
 
 
 __all__ = [name for name in globals() if name.startswith('indicate')] # type: ignore
