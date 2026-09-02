@@ -3,23 +3,18 @@
 import attr
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 
 from constants import *
 from utils import *
 
-__all__ = [
-    'Tile',
-    'Edge',
-    'Map'
-]
-
+__all__ = ['Tile', 'Wall', 'Map']
 
 
 @attr.s
 class Tile:
     """This represents a maze tile. Tiles have the following properties:
-    tile_point: a coordinate representing the location of the tile in the tile coordinate system.
+    map_point: a coordinate representing the location of the tile in the map coordinate system.
     tile_type: an optional TileType representing what tile it is, if known.
     visited: a bool flag storing whether the robot has physically been to this tile.
 
@@ -51,94 +46,80 @@ class Tile:
     - is on relative coordinate (- <TILE WIDTH MM>, 0) (relative to the origin and heading)
     """
 
-    tile_point = attr.ib(on_setattr=attr.setters.frozen) # type: Point
+    map_point = attr.ib(on_setattr=attr.setters.frozen) # type: Point
 
     tile_type = attr.ib(default=None) # type: Optional[TileType]
 
     visited = attr.ib(default=False) # type: bool
 
     if TYPE_CHECKING:
-        def __init__(self, tile_point: Point, tile_type: Optional[TileType] = None, visited: bool = False): ...
+        def __init__(self, map_point: Point, tile_type: Optional[TileType] = None, visited: bool = False): ...
 
 
     @property
     def origin(self) -> Point:
         """Return the global coordinates of the tile center. E.g. (0,1) -> (0, <TILE WIDTH MM>)"""
         return Point(
-            self.tile_point.x * TILE_WIDTH,
-            self.tile_point.y * TILE_WIDTH
+            self.map_point.x * TILE_WIDTH,
+            self.map_point.y * TILE_WIDTH
         )
 
 
     def is_adjacent_to(self, tile: 'Tile') -> bool:
         """Check whether this tile is adjacent to another, i.e. one is directly n/s/e/w of the other"""
-        is_shifted_x = abs(self.tile_point.x - tile.tile_point.x) == 1
-        is_shifted_y = abs(self.tile_point.y - tile.tile_point.y) == 1
+        is_shifted_x = abs(self.map_point.x - tile.map_point.x) == 1
+        is_shifted_y = abs(self.map_point.y - tile.map_point.y) == 1
         return is_shifted_x != is_shifted_y # one is true, one is false
 
 
-
-@attr.s(frozen=True, auto_detect=True)
-class Edge:
-    """This represents an undirected edge between two adjacent tiles.
-    a: a Tile
-    b: a Tile
-
-    Here is an example of a tile-edge graph based on a maze:
-            |‾‾‾‾‾‾‾|
-            | (0,1) |
-            |       |
-    |‾‾‾‾‾‾‾        ‾‾‾‾‾‾‾‾|
-    | (-1,0)  (0,0)   (1,0) |
-    |_______        ________|
-    |               |
-    |(-1,-1)  (0,-1)|
-    |_______________|
-    
-    becomes:
-
-                (0,1)
-                  |
-                  |
-     (-1,0)-----(0,0)-----(1,0)
-                  |
-                  |
-    (-1,-1)-----(0,-1)
-
-    Each point is a Tile, each line is an Edge.
-    Each edge represents an open direction.
+@attr.s(frozen=True)
+class Wall:
+    """This represents a maze wall.
+    +----$-----+
+    |          |
+    |    @     #
+    |          |
+    +----------+
+    In above example, if '@' is Tile(0, 0)
+    then '$' is Wall(0, 0.5) and '#' is Wall(0.5, 0)
+    (in map coordinates).
     """
 
-    a = attr.ib() # type: Tile
-    b = attr.ib() # type: Tile
+    map_point = attr.ib() # type: Point
 
     if TYPE_CHECKING:
-        def __init__(self, a: Tile, b: Tile) -> None: ...
-
-    @b.validator # type: ignore
-    def _validate_tiles(self, _, b: Tile):
-        a = self.a
-        assert a != b
-        assert a.tile_point != b.tile_point
-        assert a.is_adjacent_to(b)
-
-    # this makes `Edge(a, b) == Edge(b, a) work`
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        return self.has(*other.tiles)
+        def __init__(self, map_point: Point): ...
 
 
     @property
-    def tiles(self) -> Tuple[Tile, Tile]:
-        """Tuple of the tiles"""
-        return self.a, self.b
+    def origin(self) -> Point:
+        """Return the global coordinates of the wall midpoint. E.g. (0,0.5) -> (0, <TILE WIDTH MM>/2)"""
+        return Point(
+            self.map_point.x * TILE_WIDTH,
+            self.map_point.y * TILE_WIDTH
+        )
 
 
-    def has(self, *tiles: Tile) -> bool:
-        """Check whether the edge has these tiles"""
-        return all(tile in self.tiles for tile in tiles)
+    def is_between(self, a: Tile, b: Tile) -> bool:
+        """Does this wall separate the two tiles?"""
+        assert a.is_adjacent_to(b)
+        midpoint = LineString([a.map_point, b.map_point]).centroid
+        return self.map_point == midpoint
 
+
+    @classmethod
+    def from_tiles(cls, a: Tile, b: Tile) -> 'Wall':
+        """Create a wall between two tiles"""
+        assert a.is_adjacent_to(b)
+        midpoint = LineString([a.map_point, b.map_point]).centroid
+        return cls(midpoint)
+
+
+    @classmethod
+    def from_tile(cls, tile: Tile, direction: Direction) -> 'Wall':
+        """Create a wall on the <direction> side of <tile>"""
+        midpoint = shift(tile.map_point, direction, 0.5)
+        return cls(midpoint)
 
 
 class Map:
@@ -148,22 +129,22 @@ class Map:
     """
 
     def __init__(self):
-        # Internal storage of tiles and edges
+        # Internal map
         self._tiles = [] # type: List[Tile]
-        self._edges = [] # type: List[Edge]
+        self._walls = [] # type: List[Wall]
 
 
     @property
     def is_empty(self) -> bool:
-        return bool(self._tiles)
+        return not bool(self._tiles)
 
 
-    # tile operations
+    # tiles
 
 
     def add_tile(self, tile: Tile):
         """Add a tile to the map"""
-        assert self.get_tile(tile.tile_point) is None # prefer over `tile in self._tiles` because tile_type may change
+        assert self.get_tile(tile.map_point) is None # prefer over `tile in self._tiles`
         self._tiles.append(tile)
 
 
@@ -173,9 +154,9 @@ class Map:
             self.add_tile(tile)
 
 
-    def get_tile(self, tile_point: Point) -> Optional[Tile]:
+    def get_tile(self, map_point: Point) -> Optional[Tile]:
         """Lookup a tile from its tile coordinate"""
-        return next((tile for tile in self._tiles if tile.tile_point == tile_point), None)
+        return next((tile for tile in self._tiles if tile.map_point == map_point), None)
 
 
     def get_tile_by_direction(self, tile: Tile, direction: Direction, require_open: bool) -> Optional[Tile]:
@@ -183,7 +164,7 @@ class Map:
         In other words, moving to the <direction> of <tile> gives us the result (or None).
         NOTE: there could be a wall between the two tiles. To only consider tiles that are open, use require_open=True
         """
-        new_tile = self.get_tile(shift(tile.tile_point, direction))
+        new_tile = self.get_tile(shift(tile.map_point, direction))
 
         if new_tile is None:
             return None
@@ -194,66 +175,66 @@ class Map:
         return new_tile
 
 
-    def create_tile_by_direction(self, tile: Tile, direction: Direction, mark_open: bool) -> Tile:
-        """Create a tile to the <direction> of <tile>, and add it to the map.
-        NOTE: by default this creates a path between the two tiles (<mark_open>)
-        """
-        new_tile = Tile(shift(tile.tile_point, direction))
+    def create_tile_by_direction(self, tile: Tile, direction: Direction) -> Tile:
+        """Create a tile to the <direction> of <tile> and add it to the map"""
+        new_tile = Tile(shift(tile.map_point, direction))
         self.add_tile(new_tile)
-
-        if mark_open:
-            self.mark_open(tile, new_tile)
-
         return new_tile
 
 
-    # walls / open paths
+    # walls
+
+
+    def add_wall(self, wall: Wall):
+        """Add a wall to the map"""
+        assert not any(_wall.map_point == wall.map_point for _wall in self._walls)
+        self._walls.append(wall)
+
+
+    def get_wall_by_direction(self, tile: Tile, direction: Direction) -> Optional[Wall]:
+        map_point = shift(tile.map_point, direction, 0.5)
+        return next((wall for wall in self._walls if wall.map_point == map_point), None)
+
+
+    def create_wall_by_direction(self, tile: Tile, direction: Direction) -> 'Wall':
+        wall = Wall.from_tile(tile, direction)
+        self.add_wall(wall)
+        return wall
+
+
+    def create_wall_between(self, a: Tile, b: Tile) -> 'Wall':
+        wall = Wall.from_tiles(a, b)
+        self.add_wall(wall)
+        return wall
+
+
+    # utils
 
 
     def is_open(self, a: Tile, b: Tile) -> bool:
         """Check whether two adjacent tiles are open (have no wall separating them)
-        We check whether an edge exists
+        We check whether an wall exists
         """
         assert a.is_adjacent_to(b)
-        edge = next((edge for edge in self._edges if edge.has(a, b)), None)
-        if edge is None:
-            return False
-        return True
-
-
-    def is_open_direction(self, tile: Tile, direction: Direction) -> bool:
-        """Check whether a direction is clear, i.e. can the robot move in this direction without bumping into a wall
-        We check whether an edge exists between the two tiles.
-        NOTE: if <direction> leads off the map, i.e. there is no tile in that direction, we return False
-        """
-        return self.get_tile_by_direction(tile, direction, require_open=True) is not None
+        wall = next((wall for wall in self._walls if wall.is_between(a, b)), None)
+        if wall is None:
+            return True
+        return False
 
 
     def mark_open(self, a: Tile, b: Tile):
-        """Call this when the robot discovers an open path between two tiles.
-        We add an edge between the tiles
-        """
-        edge = Edge(a, b)
-        if edge not in self._edges:
-            self._edges.append(edge)
-
-
-    def mark_closed(self, a: Tile, b: Tile):
-        """Call this when the robot discovers a wall between two tiles.
-        We remove the edge between them, if one exists.
-        """
-        self._edges = [edge for edge in self._edges if not edge.has(a, b)]
+        """Mark two tiles as open, by removing a wall between them if any"""
+        self._walls = [wall for wall in self._walls if not wall.is_between(a, b)]
 
 
     def mark_nogo(self, tile: Tile):
         """Call this when the robot detects that a tile is black.
-        We change the tile's `tile_type` to black, and remove all edges (open paths) containing this tile
+        We change the tile's `tile_type` to black, and add walls all around it
         """
         tile.tile_type = TileType.NOGO
-        self._edges = [edge for edge in self._edges if not edge.has(tile)]
-
-
-    # statistics
+        for direction in Direction:
+            wall = Wall.from_tile(tile, direction)
+            self.add_wall(wall)
 
 
     @property
@@ -270,5 +251,4 @@ class Map:
             stats[tile.tile_type] += 1
 
         return stats
-
-
+    

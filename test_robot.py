@@ -127,15 +127,15 @@ class SolverTester:
         self._robot.heading = 0
 
 
-    def calibrate_to_tile_point(self, tile_point: Point):
-        tile = self._map.get_tile(tile_point)
+    def calibrate_to_map_point(self, map_point: Point):
+        tile = self._map.get_tile(map_point)
         assert tile is not None
         self._solver._current_tile = tile
         self._robot.origin = tile.origin
 
 
     def calibrate_to_global_origin(self):
-        self.calibrate_to_tile_point(Point(0, 0))
+        self.calibrate_to_map_point(Point(0, 0))
         self._robot.origin = Point(0, 0)
 
 
@@ -212,10 +212,10 @@ if __name__ == '__main__':
         '''
         current_tile = Tile(Point(0, 0))
         map.add_tile(current_tile)
-        north_tile = map.create_tile_by_direction(current_tile, Direction.NORTH, mark_open=True)
-        north_east_tile = map.create_tile_by_direction(north_tile, Direction.EAST, mark_open=True)
-        north_west_tile = map.create_tile_by_direction(north_tile, Direction.WEST, mark_open=True)
-        north_north_tile = map.create_tile_by_direction(north_tile, Direction.NORTH, mark_open=True)
+        north_tile = map.create_tile_by_direction(current_tile, Direction.NORTH)
+        north_east_tile = map.create_tile_by_direction(north_tile, Direction.EAST)
+        north_west_tile = map.create_tile_by_direction(north_tile, Direction.WEST)
+        north_north_tile = map.create_tile_by_direction(north_tile, Direction.NORTH)
 
         solver = Solver(robot, map)
 

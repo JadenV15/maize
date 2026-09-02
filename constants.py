@@ -208,4 +208,4 @@ LED_FINISH_COLOR = 'YELLOW'
 BUTTON_POLL_INTERVAL_MS = 300
 
 
-__all__ = [name for name in globals() if not name.startswith('_')] # type: ignore # __all__ at the end!
+__all__ = [name for name in globals() if not name.startswith('_')] # type: ignore

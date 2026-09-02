@@ -10,7 +10,7 @@ from constants import *
 from utils import *
 
 from robot import Robot
-from map import Tile, Edge, Map
+from map import Tile, Wall, Map
 from indicate import *
 
 __all__ = ['Solver']
@@ -59,7 +59,7 @@ class Solver:
 
         # add current tile
         start_tile = Tile(
-            tile_point=Point(0, 0), # define the global origin to be at the start tile origin
+            map_point=Point(0, 0), # define the global origin to be at the start tile origin
             tile_type=TileType.START, # this is a Start tile
             visited=True # we have 'visited' the start tile
         )
@@ -101,9 +101,8 @@ class Solver:
 
         # define the tile north of the start tile
         # which is (0, 1)
-        next_tile = Tile(tile_point=Point(0, 1))
+        next_tile = Tile(map_point=Point(0, 1))
         self._map.add_tile(next_tile)
-        self._map.mark_open(start_tile, next_tile)
 
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
@@ -176,13 +175,17 @@ class Solver:
             indicate_unharmed_victim()
 
         # scan open directions
-        open_directions = self._robot.lookaround() # this acts like wait() because it takes some time
+        rel_directions = self._robot.lookaround() # this acts like wait() because it takes some time
+        global_directions = [Direction.from_heading(rel_direction.rotate(self._robot.heading)) for rel_direction in rel_directions]
 
-        for rel_direction in open_directions:
+        # update map with walls
+        for direction in Direction:
+            if direction not in global_directions:
+                # there is a wall
+                self._map.create_wall_by_direction(tile, direction)
+
+        for rel_direction, global_direction in zip(rel_directions, global_directions):
             assert rel_direction != Direction.SOUTH
-
-            # NOTE: this direction is RELATIVE. we need to convert it to a GLOBAL on.
-            global_direction = Direction.from_heading(rel_direction.rotate(self._robot.heading))
 
             # get neighbour in that direction
             neighbour = self._map.get_tile_by_direction(tile, global_direction, require_open=False)
@@ -196,8 +199,9 @@ class Solver:
 
                 continue # next
 
-            neighbour = self._map.create_tile_by_direction(tile, global_direction, mark_open=True)
-
+            neighbour = self._map.create_tile_by_direction(tile, global_direction)
+            self._map.mark_open(tile, neighbour)
+            
             # move and explore
             # basically:
             #   move_to()
@@ -236,8 +240,6 @@ class Solver:
                 self._map.mark_nogo(neighbour)
 
                 continue
-
-            # TODO - test this, see if i missed anything
 
 
     # movement
@@ -359,13 +361,10 @@ class Solver:
             assert current_tile is not None
 
             # calibrate only if there is a wall
-
-            if self._map.is_open_direction(current_tile, global_direction):
-                return
-
-            self._robot.us_turn_to(Direction.NORTH) # which would be along global_direction
-            if self._robot.is_open:
-                return
+            if self._map.get_wall_by_direction(current_tile, global_direction) is None:
+                self._robot.us_turn_to(Direction.NORTH)
+                if self._robot.is_open:
+                    return
 
             # here, we have confirmed there is a wall directly in front of the robot
             # we can move forward and calibrate
@@ -597,6 +596,7 @@ class Solver:
                        buffer
         """
         # TODO
+        self._turn_step_5_a(inverse)
 
 
 
