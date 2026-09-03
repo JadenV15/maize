@@ -105,9 +105,9 @@ class TileType(_Enum):
 
 # ==== MAZE ====
 
-# TODO: revert to original. this only for testing on my table
-NORMAL_TILE_COLOR = Color.BLACK # Color.WHITE
-NOGO_TILE_COLOR = Color.WHITE # Color.BLACK
+# TODO: revert to original
+NORMAL_TILE_COLOR = Color.WHITE
+NOGO_TILE_COLOR = Color.BLACK
 HARMED_VICTIM_COLOR = Color.RED
 UNHARMED_VICTIM_COLOR = Color.GREEN
 
@@ -123,16 +123,16 @@ TILE_HALF_WIDTH = TILE_WIDTH / 2
 # ==== ROBOT ====
 
 # TODO: finalise measurements
-ROBOT_WIDTH = 135
+ROBOT_WIDTH = 120
 ROBOT_HEIGHT = 182
 
 # to calibrate
 
-EAST_WEST_WALL_US_DISTANCE = TILE_HALF_WIDTH # TODO - expected/'perfect' distances to walls
+EAST_WEST_WALL_US_DISTANCE = 110 # expected/'perfect' distances to walls
 
 WHEEL_ROTATION_RATIO = 1 / 1 # programmed : actual
-WHEEL_DRIVING_RATIO = 150 / 142 # programmed : actual
-US_NINETY_DEGREES = 99 # TODO
+WHEEL_DRIVING_RATIO = 1 / 1 # programmed : actual
+US_NINETY_DEGREES = 100 # TODO
 
 DEFAULT_STRAIGHT_SPEED = Speed.MEDIUM
 DEFAULT_TURNING_SPEED = Speed.SLOW
