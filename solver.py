@@ -445,6 +445,10 @@ class Solver:
                     self._robot.drive(abs(signed_distance_to_center), forward=signed_distance_to_center > 0)
 
                     self._robot.origin = current_tile.origin
+            else:
+                self._robot.drive(TILE_HALF_WIDTH, forward=False)
+                self._robot.origin = current_tile.origin
+                return
 
 
     def advance(self, handle_nogo_tiles: bool = True, calibrate: bool = True, us_calibrate: bool = True):

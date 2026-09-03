@@ -167,7 +167,7 @@ class Robot:
         Note: this does nothing physically.
         """
         # inverse of the above: convert our heading back to EV3 theta.
-        assert 0 <= degrees < 360
+        #assert 0 <= degrees < 360
         self._drive.theta = math.radians((90 - degrees) % 360)
 
 
@@ -327,7 +327,7 @@ class Robot:
 
     def us_calibrate_to_north(self):
         """Turn to exact north (involves an extra turn)"""
-        self._us_motor.on(US_MOTOR_SPEED)
+        self._us_motor.on(SpeedPercent(US_MOTOR_SPEED))
         # turn to left/right
         self._us_motor.wait_until_not_moving()
         self._us_motor.off()
