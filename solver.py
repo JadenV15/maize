@@ -26,9 +26,11 @@ class NogoTileError(Exception):
 class Solver:
     """mAZE solver"""
 
+
     @staticmethod
     def _debug(message: str):
         print('[SOLVER] {}'.format(message))
+
     
     def __init__(self, robot: Robot, map: Map):
         self._robot = robot
@@ -342,15 +344,6 @@ class Solver:
                 self._robot.origin = initial_origin
                 return current_tile_type
 
-    
-    @property
-    def _is_nogo(self) -> bool:
-        """Is the tile under the CS black?
-        This is just to save me some typing when writing the movements
-        """
-        # use smart
-        return self.get_smart_tile_type() == TileType.NOGO
-
 
     def drive_forward_until_not_moving(self, speed: Speed = DEFAULT_STRAIGHT_SPEED):
         """Keep driving forward until the US readings are stable (no changes), plus a little extra distance (DRIVE_WALL_EXTRA_DISTANCE).
@@ -580,7 +573,7 @@ class Solver:
             self._robot.drive(ADVANCE_A_DISTANCE)
             wait()
 
-            if self._is_nogo:
+            if self.get_smart_tile_type() == TileType.NOGO:
                 self._debug('NOGO detected during straight advance')
                 indicate_nogo_tile()
                 self._robot.drive(ADVANCE_A_DISTANCE, forward=False)
@@ -632,13 +625,13 @@ class Solver:
         self._debug('advance complete')
 
 
-    def backtrack(self):
+    def backtrack(self, calibrate: bool = True):
         """Move backward.
         This is movement #2 in the doc.
         NOTE: there is no need to worry about black tiles,
         because we assume both tiles have already been explored
         """
-        # NO CALIBRATION
+        # NO CALIBRATION - doesn't seem necessary atm
         self._robot.drive(TILE_WIDTH, forward=False)
 
 
@@ -825,7 +818,7 @@ class Solver:
         if not inverse:
             self._robot.drive(STEP_5_A_DISTANCE)
 
-            if raise_if_nogo and self._is_nogo:
+            if raise_if_nogo and self.get_smart_tile_type() == TileType.NOGO:
                 self._debug('NOGO detected during diagonal step 5')
                 wait()
                 self._robot.drive(STEP_5_A_DISTANCE, forward=False)
@@ -948,7 +941,7 @@ class Solver:
                 # move remaining buffer distance
                 self._robot.drive(NOGO_DETECTION_BUFFER)
 
-                if raise_if_nogo and self._is_nogo:
+                if raise_if_nogo and self.get_smart_tile_type() == TileType.NOGO:
                     self._debug('NOGO detected during calibrated step 5')
                     wait()
                     self._robot.drive(STEP_5_A_DISTANCE, forward=False)
@@ -986,7 +979,7 @@ class Solver:
         self._turn_step_4()
         wait()
 
-        if handle_nogo_tiles and self._is_nogo:
+        if handle_nogo_tiles and self._robot.tile_type == TileType.NOGO: # no need for smart()
             indicate_nogo_tile()
             # do everything backwards to return to initial position
             self._turn_step_4(inverse=True)
@@ -1031,7 +1024,7 @@ class Solver:
         self._turn_step_4(inverse=True)
         wait()
 
-        if handle_nogo_tiles and self._is_nogo:
+        if handle_nogo_tiles and self._robot.tile_type == TileType.NOGO:
             indicate_nogo_tile()
             self._turn_step_4()
             wait()
