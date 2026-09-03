@@ -121,7 +121,7 @@ class Solver:
 
         # add tile type of next_tile
         tile_type = self._robot.tile_type
-        assert tile_type not in (TileType.START, TileType.NOGO)
+        assert tile_type not in (TileType.START, TileType.NOGO, None)
         next_tile.tile_type = tile_type
         self._debug('initial next tile type={}'.format(tile_type))
 
@@ -175,9 +175,9 @@ class Solver:
         tile.visited = True
 
         # since the robot is at the centre of  `tile`,
-        # take a reading of the tile type
+        # we take a reading of the tile type
         # and assign it to the tile
-        tile_type = self._robot.tile_type
+        tile_type = self.get_smart_tile_type() # use smart
         assert tile_type not in (TileType.START, TileType.NOGO)
         tile.tile_type = tile_type
         self._debug('tile {} type={}'.format(tile.map_point, tile_type))
@@ -280,13 +280,76 @@ class Solver:
 
     # helpers
 
+
+    def get_smart_tile_type(self) -> TileType:
+        """Move back and forth until a proper tiletype is detected, then return to original position.
+        Robot is assumed to be centered in the tile
+        """
+        current_tile_type = self._robot.tile_type
+        if current_tile_type is not None:
+            return current_tile_type
+
+        small_distance = 5 # mm # TODO: constant?
+        max_distance = 35 # max abs distance from initial origin
+
+        abs_distance = 0 # total abs distance from initial origin
+        initial_origin = self._robot.origin
+
+        while True:
+            if abs_distance + small_distance >= max_distance:
+                # driving back again would exceed max
+                # try again, but moving forward
+
+                # first move back to origin
+                self._robot.drive(abs_distance)
+                self._robot.origin = initial_origin
+                # try again at origin just for luck
+                current_tile_type = self._robot.tile_type
+                if current_tile_type is not None:
+                    return current_tile_type
+                
+                abs_distance = 0
+                while True:
+                    if abs_distance + small_distance >= max_distance:
+                        self._robot.drive(abs_distance, forward=False)
+                        self._robot.origin = initial_origin
+                        # one final try just for luck
+                        current_tile_type = self._robot.tile_type
+                        if current_tile_type is not None:
+                            return current_tile_type
+
+                        else:
+                            return TileType.NORMAL # pretend its normal
+                        
+                    self._robot.drive(small_distance)
+                    abs_distance += small_distance
+
+                    current_tile_type = self._robot.tile_type
+                    if current_tile_type is not None:
+                        wait()
+                        self._robot.drive(abs_distance, forward=False)
+                        self._robot.origin = initial_origin
+                        return current_tile_type
+            
+            self._robot.drive(small_distance, forward=False)
+            abs_distance += small_distance
+
+            current_tile_type = self._robot.tile_type
+            if current_tile_type is not None:
+                wait()
+                self._robot.drive(abs_distance)
+                # calibrate
+                self._robot.origin = initial_origin
+                return current_tile_type
+
     
     @property
     def _is_nogo(self) -> bool:
         """Is the tile under the CS black?
         This is just to save me some typing when writing the movements
         """
-        return self._robot.tile_type == TileType.NOGO
+        # use smart
+        return self.get_smart_tile_type() == TileType.NOGO
 
 
     def drive_forward_until_not_moving(self, speed: Speed = DEFAULT_STRAIGHT_SPEED):
@@ -342,9 +405,9 @@ class Solver:
                     break
                 wait(DRIVE_WALL_POLL_INTERVAL_MS)
 
+        self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward=False, speed=speed)
+
         if len(self._robot.touching_rel_directions) == 2:
-            # fully aligned
-            self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward=False, speed=speed)
             self._debug('backward wall approach aligned on both touch sensors')
             return
 
@@ -361,7 +424,7 @@ class Solver:
             corrections += 1
 
             if len(self._robot.touching_rel_directions) == 2:
-                return # extra distance probably unnecessary
+                return
 
             elif self._robot.is_touching_rel_direction(Direction.EAST):
                 # don't use given speed here, as deltas are very small

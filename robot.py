@@ -436,7 +436,7 @@ class Robot:
         return Color(self._cs.color)
 
     @property
-    def tile_type(self) -> TileType:
+    def tile_type(self) -> Optional[TileType]:
         """What type of tile or victim is under the robot origin based on the color?"""
         col = self._cs.color
 
@@ -457,9 +457,8 @@ class Robot:
             result = TileType.HARMED_VICTIM
         
         else:
-            # lets hope its just a glitch
-            result = TileType.NORMAL
-
+            result = None
+        
         self._debug('tile type: color={}, reflected={}, result={}'.format(
             col, self._cs.reflected_light_intensity, result
         ))
