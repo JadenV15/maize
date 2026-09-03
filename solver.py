@@ -25,6 +25,10 @@ class NogoTileError(Exception):
 
 class Solver:
     """mAZE solver"""
+
+    @staticmethod
+    def _debug(message: str):
+        print('[SOLVER] {}'.format(message))
     
     def __init__(self, robot: Robot, map: Map):
         self._robot = robot
@@ -33,6 +37,7 @@ class Solver:
 
     def solve(self, test_initial_only: bool = False):
         """Main entry point"""
+        self._debug('solve start: test_initial_only={}'.format(test_initial_only))
         # assert we are starting fresh
         assert self._map.is_empty
         try:
@@ -64,6 +69,7 @@ class Solver:
             visited=True # we have 'visited' the start tile
         )
         self._map.add_tile(start_tile)
+        self._debug('start tile added at {}'.format(start_tile.map_point))
 
         # calibrate the robot origin to the actual origin
         # the below var represents '@' in the diagram. We find it by shifting up from '!' by <robot height>
@@ -73,6 +79,7 @@ class Solver:
             ROBOT_HEIGHT
         )
         self._robot.origin = origin
+        self._debug('robot calibrated at start: origin={}, heading={:.1f}'.format(origin, self._robot.heading))
 
         # assert the current tile is a start tile
         assert self._robot.tile_type == TileType.START
@@ -103,10 +110,12 @@ class Solver:
         # which is (0, 1)
         next_tile = Tile(map_point=Point(0, 1))
         self._map.add_tile(next_tile)
+        self._debug('initial next tile added at {}'.format(next_tile.map_point))
 
         # move
         delta = origin.distance(next_tile.origin) # distance to move forward by
         self._robot.drive(delta)
+        self._debug('initial advance complete: distance={:.1f}mm'.format(delta))
         #next_tile.visited = True
         # ^^^ don't do this, as dfs() will mark it as visited
 
@@ -114,6 +123,7 @@ class Solver:
         tile_type = self._robot.tile_type
         assert tile_type not in (TileType.START, TileType.NOGO)
         next_tile.tile_type = tile_type
+        self._debug('initial next tile type={}'.format(tile_type))
 
         # at this point we are set up
 
@@ -128,6 +138,7 @@ class Solver:
 
         # start exploring from tile (0,1)
         self.dfs(next_tile)
+        self._debug('DFS complete; returning to start')
 
         wait()
 
@@ -136,6 +147,7 @@ class Solver:
 
         indicate_finish()
         indicate_final_counts(self._map.statistics)
+        self._debug('solve complete')
 
 
     # dfs
@@ -155,6 +167,7 @@ class Solver:
 
         # this tile should have been assigned as current
         assert self._current_tile is tile
+        self._debug('DFS enter tile={} origin={}'.format(tile.map_point, tile.origin))
         
         # mark this tile as visited (we are ON it)
         # technically, all tiles in map are visited. This is just a bit more explicit, i guess
@@ -167,6 +180,7 @@ class Solver:
         tile_type = self._robot.tile_type
         assert tile_type not in (TileType.START, TileType.NOGO)
         tile.tile_type = tile_type
+        self._debug('tile {} type={}'.format(tile.map_point, tile_type))
 
         # announce if applicable
         if tile_type == TileType.HARMED_VICTIM:
@@ -178,6 +192,9 @@ class Solver:
         rel_directions = self._robot.lookaround() # this acts like wait() because it takes some time
         global_directions = [Direction.from_heading(rel_direction.rotate(self._robot.heading)) for rel_direction in rel_directions]
         global_south = Direction.from_heading(Direction.SOUTH.rotate(self._robot.heading))
+        self._debug('scan: relative_open={}, global_open={}, unscanned_reverse={}'.format(
+            rel_directions, global_directions, global_south
+        ))
 
         # update map with walls
         for direction in Direction:
@@ -187,12 +204,14 @@ class Solver:
             if direction not in global_directions:
                 # there is a wall
                 self._map.create_wall_by_direction(tile, direction)
+                self._debug('wall recorded: tile={}, direction={}'.format(tile.map_point, direction))
 
         for rel_direction, global_direction in zip(rel_directions, global_directions):
             assert rel_direction != Direction.SOUTH
 
             # get neighbour in that direction
             neighbour = self._map.get_tile_by_direction(tile, global_direction, require_open=False)
+            self._debug('edge considered: {} -> {} via {}'.format(tile.map_point, global_direction, neighbour.map_point if neighbour else 'new'))
 
             # check if already visited
             if neighbour is not None: # and neighbour.visited: # technically redundant because we only add tiles to the map if the tile has been visited
@@ -222,6 +241,10 @@ class Solver:
 
                 move_there, move_back = functions[rel_direction]
 
+                self._debug('move to {} from {}: relative={}, global={}'.format(
+                    neighbour.map_point, tile.map_point, rel_direction, global_direction
+                ))
+
                 move_there()
                 self._current_tile = neighbour
 
@@ -231,6 +254,7 @@ class Solver:
                 self._current_tile = tile
 
                 wait()
+                self._debug('returned to tile {}'.format(tile.map_point))
 
             except NogoTileError:
                 # we are back exactly where we started (`tile`)
@@ -242,6 +266,7 @@ class Solver:
 
                 # mark tile as black
                 self._map.mark_nogo(neighbour)
+                self._debug('NOGO recorded at {}'.format(neighbour.map_point))
 
                 continue
 
@@ -270,6 +295,7 @@ class Solver:
         NOTE: US must be facing a wall (and the wall must be within range) for this to work
         NOTE: Remember to calibrate position after this!
         """
+        self._debug('forward wall approach start: speed={}'.format(speed))
         self._robot.us_turn_to(Direction.NORTH)
 
         last_reading = self._robot.us_distance
@@ -283,17 +309,20 @@ class Solver:
 
                 # check if distance limit reached
                 if distance.value >= DRIVE_WALL_MAX_DISTANCE:
+                    self._debug('forward wall approach reached max distance')
                     break
 
                 # check if US reading is stable
                 current_reading = self._robot.us_distance
                 if math.isclose(last_reading, current_reading, abs_tol=0.1):
+                    self._debug('forward wall approach stable: {:.1f}mm -> {:.1f}mm'.format(last_reading, current_reading))
                     break
                 last_reading = current_reading
 
         # extra distance (robot is already at the wall, this just hopefully corrects the heading by ramming against the wall)
         # no need to do wait() because we are driving in one direction near-continuously
         self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, speed=speed)
+        self._debug('forward wall approach complete: measured={:.1f}mm'.format(distance.value))
 
         # right now the odometry is all messed up
         # because the wheels have been spinning while slipping, and the robot not moving
@@ -305,6 +334,7 @@ class Solver:
         Use this to drive backward until hit wall
         NOTE: Remember to calibrate position after this!
         """
+        self._debug('backward wall approach start: speed={}'.format(speed))
         with self._robot.driving(forward=False, speed=speed) as distance:
             while True:
                 if self._robot.touching_rel_directions or distance.value >= DRIVE_WALL_MAX_DISTANCE:
@@ -315,6 +345,7 @@ class Solver:
         if len(self._robot.touching_rel_directions) == 2:
             # fully aligned
             self._robot.drive(DRIVE_WALL_EXTRA_DISTANCE, forward=False, speed=speed)
+            self._debug('backward wall approach aligned on both touch sensors')
             return
 
         # these are too unimportant to be constants (?)
@@ -340,12 +371,14 @@ class Solver:
             elif self._robot.is_touching_rel_direction(Direction.WEST):
                 self._robot.turn_by(small_angle)
                 self._robot.drive(small_distance, forward=False)
+            self._debug('backward wall approach complete after {} corrections'.format(corrections))
 
 
     # first, the simple ones
 
 
     def _advance_us_calibrate(self, current_tile: Tile, global_direction: Direction):
+            self._debug('lateral calibration start: tile={}, direction={}'.format(current_tile.map_point, global_direction))
             # TODO: US calibration
             r'''
             Either left/right wall is required to exist
@@ -424,6 +457,7 @@ class Solver:
                     # normal reverse
                     self._robot.drive(TILE_HALF_WIDTH, forward=False)
                     self._robot.origin = current_tile.origin
+                    self._debug('lateral calibration ignored offset={:.1f}mm'.format(offset))
 
                 else:
                     is_too_close_to_wall = signed_extra_distance_from_wall < 0
@@ -445,9 +479,11 @@ class Solver:
                     self._robot.drive(abs(signed_distance_to_center), forward=signed_distance_to_center > 0)
 
                     self._robot.origin = current_tile.origin
+                    self._debug('lateral calibration complete: offset={:.1f}mm'.format(offset))
             else:
                 self._robot.drive(TILE_HALF_WIDTH, forward=False)
                 self._robot.origin = current_tile.origin
+                self._debug('lateral calibration skipped: no side wall')
                 return
 
 
@@ -474,11 +510,15 @@ class Solver:
         If 'wall' exists, move up to it then back, to calibrate
         TODO: is there enough time to calibrate?
         """
+        self._debug('advance start: handle_nogo_tiles={}, calibrate={}, us_calibrate={}'.format(
+            handle_nogo_tiles, calibrate, us_calibrate
+        ))
         if handle_nogo_tiles:
             self._robot.drive(ADVANCE_A_DISTANCE)
             wait()
 
             if self._is_nogo:
+                self._debug('NOGO detected during straight advance')
                 indicate_nogo_tile()
                 self._robot.drive(ADVANCE_A_DISTANCE, forward=False)
                 raise NogoTileError
@@ -505,6 +545,7 @@ class Solver:
             if self._map.get_wall_by_direction(current_tile, global_direction) is None:
                 self._robot.us_turn_to(Direction.NORTH)
                 if self._robot.is_open:
+                    self._debug('advance calibration skipped: no front wall')
                     return
 
             # here, we have confirmed there is a wall directly in front of the robot
@@ -521,9 +562,11 @@ class Solver:
             if not us_calibrate:
                 self._robot.drive(TILE_HALF_WIDTH, forward=False)
                 self._robot.origin = current_tile.origin
+                self._debug('advance calibration complete without lateral US calibration')
 
             else:
                 self._advance_us_calibrate(current_tile, global_direction)
+        self._debug('advance complete')
 
 
     def backtrack(self):
@@ -577,6 +620,7 @@ class Solver:
         |               |
         +----+--!--+----+
         """
+        self._debug('turn step 1: inverse={}'.format(inverse))
         if not inverse:
             self._robot.drive(TILE_HALF_WIDTH, forward=False)
         else:
@@ -600,6 +644,7 @@ class Solver:
         |  ⤶     ⤶      |
         +---------------+
         """
+        self._debug('turn step 2: inverse={}'.format(inverse))
         if not inverse:
             self._robot.turn_by(STEP_2_ROTATION)
         else:
@@ -623,6 +668,7 @@ class Solver:
         |               |
         +---------------+
         """
+        self._debug('turn step 3: inverse={}'.format(inverse))
         if not inverse:
             self._robot.drive(STEP_3_DISTANCE)
         else:
@@ -651,6 +697,7 @@ class Solver:
         half tile width
             + adjacent
         """
+        self._debug('turn step 4: inverse={}'.format(inverse))
         if not inverse:
             self._robot.turn_by(STEP_4_ROTATION)
         else:
@@ -711,10 +758,12 @@ class Solver:
                     <-----><---->
         STEP_5_A_DISTANCE   STEP_5_B_DISTANCE
         """
+        self._debug('turn step 5 no calibration: inverse={}, raise_if_nogo={}'.format(inverse, raise_if_nogo))
         if not inverse:
             self._robot.drive(STEP_5_A_DISTANCE)
 
             if raise_if_nogo and self._is_nogo:
+                self._debug('NOGO detected during diagonal step 5')
                 wait()
                 self._robot.drive(STEP_5_A_DISTANCE, forward=False)
                 raise NogoTileError
@@ -737,6 +786,9 @@ class Solver:
         |           → → |               |
         +---------------+---------------+
         """
+        self._debug('turn step 5: inverse={}, raise_if_nogo={}, calibrate={}'.format(
+            inverse, raise_if_nogo, calibrate
+        ))
         if not calibrate:
             self._turn_step_5_no_calibrate(inverse, raise_if_nogo)
 
@@ -816,6 +868,7 @@ class Solver:
 
             if self._map.get_wall_by_direction(current_tile, wall_direction) is None:
                 # cannot calibrate, as no wall
+                self._debug('step 5 calibration skipped: no rear wall')
                 self._turn_step_5_no_calibrate(inverse, raise_if_nogo)
                 return
 
@@ -833,6 +886,7 @@ class Solver:
                 self._robot.drive(NOGO_DETECTION_BUFFER)
 
                 if raise_if_nogo and self._is_nogo:
+                    self._debug('NOGO detected during calibrated step 5')
                     wait()
                     self._robot.drive(STEP_5_A_DISTANCE, forward=False)
                     raise NogoTileError
@@ -858,6 +912,7 @@ class Solver:
         This is movement #4 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
+        self._debug('advance right start: handle_nogo_tiles={}, calibrate={}'.format(handle_nogo_tiles, calibrate))
         self._turn_step_1()
         wait()
         self._turn_step_2()
@@ -902,6 +957,7 @@ class Solver:
         This is movement #3 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
+        self._debug('advance left start: handle_nogo_tiles={}, calibrate={}'.format(handle_nogo_tiles, calibrate))
         # TODO: handle calibration
         self._turn_step_1()
         wait()
@@ -944,6 +1000,7 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
+        self._debug('backtrack right start: calibrate={}'.format(calibrate))
         self._turn_step_5(inverse=True, raise_if_nogo=False, calibrate=calibrate)
         wait()
         self._turn_step_4(inverse=True)
@@ -961,6 +1018,7 @@ class Solver:
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
+        self._debug('backtrack left start: calibrate={}'.format(calibrate))
         self._turn_step_5(inverse=True, raise_if_nogo=False, calibrate=calibrate)
         wait()
         self._turn_step_4()

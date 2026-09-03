@@ -37,9 +37,15 @@ class Value:
 class Robot:
     """Our beloved Robot, built by Shaurya. Provides all basic physical movement"""
 
+    @staticmethod
+    def _debug(message: str):
+        print('[ROBOT] {}'.format(message))
+
 
     def init(self):
         """Initialise the robot. The robot may move."""
+
+        self._debug('initialising')
 
         # use MoveDifferential to control both wheels at once
         self._drive = MoveDifferential(LEFT_WHEEL_PIN, RIGHT_WHEEL_PIN, WHEEL_TYPE, WHEEL_MIDPOINT_GAP)
@@ -61,10 +67,12 @@ class Robot:
             Direction.WEST: TouchSensor(LEFT_TS_PIN),
             Direction.EAST: TouchSensor(RIGHT_TS_PIN)
         }
+        self._debug('initialised: heading={:.1f}, origin={}'.format(self.heading, self.origin))
 
 
     def shutdown(self):
         """Shutdown the robot"""
+        self._debug('shutdown')
         self._drive.odometry_stop()
 
 
@@ -101,6 +109,7 @@ class Robot:
         Note: this does nothing physically.
         It just shifts the odometry system to <origin>.
         """
+        self._debug('set turning origin: {}'.format(origin))
         self._drive.x_pos_mm, self._drive.y_pos_mm = origin.x, origin.y
 
 
@@ -135,6 +144,7 @@ class Robot:
         Note: this does nothing physically.
         """
         # shift backwards along <heading> to get turning origin 
+        self._debug('set origin: {} (heading={:.1f})'.format(origin, self.heading))
         self.turning_origin = shift(origin, self.heading, - DISTANCE_BETWEEN_ORIGIN_AND_TURNING_ORIGIN)
 
 
@@ -168,6 +178,7 @@ class Robot:
         """
         # inverse of the above: convert our heading back to EV3 theta.
         #assert 0 <= degrees < 360
+        self._debug('set heading: {:.1f}'.format(degrees))
         self._drive.theta = math.radians((90 - degrees) % 360)
 
 
@@ -205,6 +216,10 @@ class Robot:
         # account for correction
         corrected_delta = delta * WHEEL_ROTATION_RATIO
         offset = delta - corrected_delta
+
+        self._debug('turn_to request={:.1f}, current={:.1f}, delta={:.1f}, corrected={:.1f}, speed={}'.format(
+            degrees, self.heading, delta, corrected_delta, speed
+        ))
         
         self._drive.turn_degrees(
             SpeedPercent(speed),
@@ -229,6 +244,10 @@ class Robot:
         corrected_degrees = degrees * WHEEL_ROTATION_RATIO
         offset = degrees - corrected_degrees
 
+        self._debug('turn_by delta={:.1f}, clockwise={}, corrected={:.1f}, speed={}'.format(
+            degrees, clockwise, corrected_degrees, speed
+        ))
+
         self._drive.turn_degrees(SpeedPercent(speed), corrected_degrees)
 
         self.heading += offset
@@ -244,6 +263,10 @@ class Robot:
         current_pos = self.origin
         delta = distance * (1 if forward else -1)
         new_pos = shift(current_pos, self.heading, delta)
+
+        self._debug('drive distance={:.1f}mm, forward={}, heading={:.1f}, from={} to={}, speed={}'.format(
+            distance, forward, self.heading, current_pos, new_pos, speed
+        ))
 
         # account for correction
         corrected_distance = distance * WHEEL_DRIVING_RATIO
@@ -264,6 +287,10 @@ class Robot:
             return initial_pos.distance(self.origin) / WHEEL_DRIVING_RATIO
         value = Value(get_abs_distance)
 
+        self._debug('start continuous drive: forward={}, origin={}, heading={}, speed={}'.format(
+            forward, initial_pos, self.heading, speed
+        ))
+
         motor_speed = SpeedPercent((1 if forward else -1) * speed)
         self._drive.on(motor_speed, motor_speed)
 
@@ -274,6 +301,7 @@ class Robot:
 
             # account for correction
             new_pos = shift(initial_pos, self.heading, value.value if forward else -value.value)
+            self._debug('stop continuous drive: distance={:.1f}mm, origin={}'.format(value.value, new_pos))
             self.origin = new_pos
 
 
@@ -304,6 +332,7 @@ class Robot:
 
     def us_turn_to(self, direction: Direction):
         """Turn to a relative direction"""
+        self._debug('US turn request: {} -> {}'.format(self._us_rel_direction, direction))
         assert direction != Direction.SOUTH
         assert self._us_rel_direction != Direction.SOUTH
 
@@ -323,10 +352,12 @@ class Robot:
             self._us_motor.on_for_degrees(SpeedPercent((1 if self._us_rel_direction == Direction.WEST else -1) * US_MOTOR_SPEED), degrees=US_NINETY_DEGREES)
 
         self._us_rel_direction = direction
+        self._debug('US direction now {}'.format(self._us_rel_direction))
 
 
     def us_calibrate_to_north(self):
         """Turn to exact north (involves an extra turn)"""
+        self._debug('US calibrate to NORTH')
         self._us_motor.on(SpeedPercent(US_MOTOR_SPEED))
         # turn to left/right
         self._us_motor.wait_until_not_moving()
@@ -342,13 +373,19 @@ class Robot:
         """Is there a wall in front of the robot?
         NOTE: we assume the robot is centred in a tile (so equal distance on either side)
         """
-        return self.us_distance > MAX_WALL_DETECTION_DISTANCE
+        distance = self.us_distance
+        is_open = distance > MAX_WALL_DETECTION_DISTANCE
+        self._debug('US check: direction={}, distance={:.1f}mm, open={}'.format(
+            self.us_rel_direction, distance, is_open
+        ))
+        return is_open
 
 
     def lookaround(self) -> List[Direction]:
         """Look to the (relative) north and east and west with the US, and return which of those directions are open (no wall)
         Instead of naively turning the sensor to each direction in turn, we try to minimise the amount of time / number of moves
         """
+        self._debug('lookaround start: US direction={}'.format(self.us_rel_direction))
         directions = []
 
         # save me some typing. this helper turns to a direction and adds it to the list if its open
@@ -384,6 +421,7 @@ class Robot:
         # any code relying on the US being at a specific position
         # should turn it to that position explicitly
 
+        self._debug('lookaround result: open={}'.format(directions))
         return directions
 
 
@@ -402,23 +440,28 @@ class Robot:
 
         # check light reflection first
         if self._cs.reflected_light_intensity >= REFLECTED_LIGHT_THRESHOLD:
-            return TileType.START
+            result = TileType.START
         
         elif col == NORMAL_TILE_COLOR:
-            return TileType.NORMAL
+            result = TileType.NORMAL
         
         elif col == NOGO_TILE_COLOR:
-            return TileType.NOGO
+            result = TileType.NOGO
         
         elif col == UNHARMED_VICTIM_COLOR:
-            return TileType.UNHARMED_VICTIM
+            result = TileType.UNHARMED_VICTIM
         
         elif col == HARMED_VICTIM_COLOR:
-            return TileType.HARMED_VICTIM
+            result = TileType.HARMED_VICTIM
         
         else:
             # lets hope its just a glitch
-            return TileType.NORMAL
+            result = TileType.NORMAL
+
+        self._debug('tile type: color={}, reflected={}, result={}'.format(
+            col, self._cs.reflected_light_intensity, result
+        ))
+        return result
 
 
     # touch sensor
@@ -426,12 +469,16 @@ class Robot:
 
     def is_touching_rel_direction(self, direction: Direction) -> bool: # relative direction
         """Check whether the robot has been touched (pressed) on <direction> side"""
-        return bool(self._ts_map[direction].is_pressed)
+        touching = bool(self._ts_map[direction].is_pressed)
+        self._debug('touch check: direction={}, pressed={}'.format(direction, touching))
+        return touching
 
 
     @property
     def touching_rel_directions(self) -> List[Direction]:
         """List of all currently touched rel directions"""
-        return [direction for direction, touch in self._ts_map.items() if touch.is_pressed]
+        directions = [direction for direction, touch in self._ts_map.items() if touch.is_pressed]
+        self._debug('touching directions: {}'.format(directions))
+        return directions
 
 
