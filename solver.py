@@ -487,7 +487,7 @@ class Solver:
                 return
 
 
-    def advance(self, handle_nogo_tiles: bool = True, calibrate: bool = True, us_calibrate: bool = True):
+    def advance(self, handle_nogo_tiles: bool = True, calibrate: bool = True, us_calibrate: bool = False):
         """Move forward.
         This is movement #1 in the doc.
         Raise black tile error and return to original position if black tile detected.

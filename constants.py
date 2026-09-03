@@ -128,7 +128,7 @@ ROBOT_HEIGHT = 182
 
 # to calibrate
 
-EAST_WEST_WALL_US_DISTANCE = 110 # expected/'perfect' distances to walls
+EAST_WEST_WALL_US_DISTANCE = 110 # expected/'perfect' distances to left/right walls
 
 WHEEL_ROTATION_RATIO = 1 / 1 # programmed : actual
 WHEEL_DRIVING_RATIO = 1 / 1 # programmed : actual
@@ -140,7 +140,7 @@ US_MOTOR_SPEED = Speed.FAST
 
 WHEEL_MIDPOINT_GAP = 98 # measured: 88
 
-MAX_WALL_DETECTION_DISTANCE = EAST_WEST_WALL_US_DISTANCE + 40 # buffer
+MAX_WALL_DETECTION_DISTANCE = 240 # a reading greater than this means no wall.
 
 REFLECTED_LIGHT_THRESHOLD = 95 # silver >= this
 

@@ -60,6 +60,8 @@ class Robot:
         # keep track of US direction. initially pointing north
         self._us_rel_direction = Direction.NORTH
 
+        self.us_calibrate_to_north()
+
         self._cs = ColorSensor(CS_PIN)
 
         # dual touch sensors
