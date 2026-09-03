@@ -143,13 +143,13 @@ class Map:
 
 
     def add_tile(self, tile: Tile):
-        """Add a tile to the map"""
-        assert self.get_tile(tile.map_point) is None # prefer over `tile in self._tiles`
-        self._tiles.append(tile)
+        """Add a tile to the map. Silent if already added"""
+        if self.get_tile(tile.map_point) is None: # prefer over `tile in self._tiles`
+            self._tiles.append(tile)
 
 
     def add_tiles(self, *tiles: Tile):
-        """Add multiple tiles to the map"""
+        """Add multiple tiles to the map. Silent if already added"""
         for tile in tiles:
             self.add_tile(tile)
 
@@ -176,9 +176,11 @@ class Map:
 
 
     def create_tile_by_direction(self, tile: Tile, direction: Direction) -> Tile:
-        """Create a tile to the <direction> of <tile> and add it to the map"""
-        new_tile = Tile(shift(tile.map_point, direction))
-        self.add_tile(new_tile)
+        """Create a tile to the <direction> of <tile> and add it to the map. Returns tile if it exists"""
+        new_tile = self.get_tile(shift(tile.map_point, direction))
+        if new_tile is None:
+            new_tile = Tile(shift(tile.map_point, direction))
+            self.add_tile(new_tile)
         return new_tile
 
 
@@ -186,9 +188,13 @@ class Map:
 
 
     def add_wall(self, wall: Wall):
-        """Add a wall to the map"""
-        assert not any(_wall.map_point == wall.map_point for _wall in self._walls)
-        self._walls.append(wall)
+        """Add a wall to the map. Silent if already added"""
+        if self.get_wall(wall.map_point) is None:
+            self._walls.append(wall)
+
+
+    def get_wall(self, map_point: Point) -> Optional[Wall]:
+        return next((wall for wall in self._walls if wall.map_point == map_point), None)
 
 
     def get_wall_by_direction(self, tile: Tile, direction: Direction) -> Optional[Wall]:
@@ -197,12 +203,14 @@ class Map:
 
 
     def create_wall_by_direction(self, tile: Tile, direction: Direction) -> 'Wall':
+        """Create a wall to the <direction> of <tile>. Return wall if it exists"""
         wall = Wall.from_tile(tile, direction)
         self.add_wall(wall)
         return wall
 
 
     def create_wall_between(self, a: Tile, b: Tile) -> 'Wall':
+        """Create a wall betweeen two tiles. Return wall if it exists"""
         wall = Wall.from_tiles(a, b)
         self.add_wall(wall)
         return wall
@@ -223,12 +231,13 @@ class Map:
 
 
     def mark_open(self, a: Tile, b: Tile):
-        """Mark two tiles as open, by removing a wall between them if any"""
+        """Mark two tiles as open, by removing a wall between them if any. Silent if already open"""
+        assert a.is_adjacent_to(b)
         self._walls = [wall for wall in self._walls if not wall.is_between(a, b)]
 
 
     def mark_nogo(self, tile: Tile):
-        """Call this when the robot detects that a tile is black.
+        """Call this when the robot detects that a tile is black. Silent if already walled.
         We change the tile's `tile_type` to black, and add walls all around it
         """
         tile.tile_type = TileType.NOGO
