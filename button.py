@@ -31,7 +31,7 @@ btn.on_backspace = on_backspace_press # type: ignore
 def poll_backspace():
     while True:
         btn.process()
-        time.sleep(BUTTON_POLL_INTERVAL_MS)
+        time.sleep(BUTTON_POLL_INTERVAL_MS / 1000)
 
 # bg thread
 # this thread runs for the entirety of the program

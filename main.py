@@ -38,26 +38,27 @@ def main():
     finally:
         robot.shutdown()
 
-# main loop
 
-while True:
-    print('Waiting for signal...')
-    wait_for_enter_press()
+if __name__ == '__main__':
+    # main loop
+    while True:
+        print('Waiting for signal...')
+        wait_for_enter_press()
 
-    print('Started')
-    try:
-        main()
+        print('Started')
+        try:
+            main()
 
-    except ExitRequestedError:
-        print('Stopped')
-        reset_backspace()
-        continue # wait for Robot Handler to press enter again to restart
+        except ExitRequestedError:
+            print('Stopped')
+            reset_backspace()
+            continue # wait for Robot Handler to press enter again to restart
 
-    except Exception as e:
-        print('Error:')
-        print(e)
-        indicate_fuck_up()
-        continue # try again, i guess?
+        except Exception as e:
+            print('Error:')
+            print(e)
+            indicate_fuck_up()
+            continue # try again, i guess?
 
 
 

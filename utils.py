@@ -11,7 +11,9 @@ from button import backspace_pressed
 __all__ = [
     'wait',
     'shift',
+    'signed_distance_to'
 ]
+
 
 
 def wait(time_ms: Numeric = WAIT_TIME_MS, check_pressed: bool = True):
@@ -43,5 +45,20 @@ def shift(point: Point, degrees: Numeric, amount: Numeric = 1) -> Point:
     )
 
 
+def signed_distance_to(start: Point, target: Point, direction: Direction) -> Numeric:
+    """How far is it from <start> to <target> along <direction>?"""
+    delta_x = target.x - start.x
+    delta_y = target.y - start.y
+
+    if direction == Direction.NORTH:
+        return delta_y
+    if direction == Direction.EAST:
+        return delta_x
+    if direction == Direction.SOUTH:
+        return -delta_y
+    if direction == Direction.WEST:
+        return -delta_x
+
+    raise ValueError(direction)
 
 

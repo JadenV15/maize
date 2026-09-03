@@ -26,8 +26,8 @@ def set_color(color: str):
     leds.set_color('RIGHT', color, pct=LED_BRIGHTNESS / 100) # type: ignore
 
 
-def flash_color(color: str, time_ms: int):
-    leds.animate_flash(color, sleeptime=200 / 1000, duration=int(time_ms / 1000), block=True)
+def flash_color(color: str):
+    leds.animate_flash(color, sleeptime=200 / 1000, duration=1, block=True)
 
 
 def clear_color():
@@ -61,14 +61,14 @@ def indicate_nogo_tile():
 def indicate_harmed_victim():
     """Pause for 1 second, indicating that the robot has discovered a red victim"""
     start_beep()
-    flash_color(LED_HARMED_COLOR, 1000)
+    flash_color(LED_HARMED_COLOR)
     clear_color()
 
 
 def indicate_unharmed_victim():
     """Pause for 1 second, indicating the robot has discovered a green victim"""
     start_beep()
-    flash_color(LED_UNHARMED_COLOR, 1000)
+    flash_color(LED_UNHARMED_COLOR)
     clear_color()
 
 

@@ -153,8 +153,8 @@ class SolverTester:
     # basic tests
 
 
-    def test_advance(self, test_nogo_tiles=False, test_calibration=False):
-        self._solver.advance(test_nogo_tiles, test_calibration)
+    def test_advance(self, test_nogo_tiles=False, test_calibration=False, test_us_calibration=False):
+        self._solver.advance(test_nogo_tiles, test_calibration, test_us_calibration)
         self._robot.log()
 
 

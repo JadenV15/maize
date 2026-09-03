@@ -273,7 +273,7 @@ class Robot:
             self._drive.off()
 
             # account for correction
-            new_pos = shift(initial_pos, self.heading, value.value)
+            new_pos = shift(initial_pos, self.heading, value.value if forward else -value.value)
             self.origin = new_pos
 
 
