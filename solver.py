@@ -26,19 +26,28 @@ class NogoTileError(Exception):
 class Solver:
     """mAZE solver"""
 
-
-    @staticmethod
-    def _debug(message: str):
-        print('[SOLVER] {}'.format(message))
-
-    
     def __init__(self, robot: Robot, map: Map):
         self._robot = robot
         self._map = map
 
+        self._solve_started_at = None # type: Optional[float]
+
+
+    @property
+    def _elapsed_seconds(self) -> float:
+        if self._solve_started_at is None:
+            return 0.0
+        return time.monotonic() - self._solve_started_at
+
+
+    def _debug(self, message: str):
+        elapsed = self._elapsed_seconds
+        print('[SOLVER] [{:.1f}s] {}'.format(elapsed, message))
+
 
     def solve(self, test_initial_only: bool = False):
         """Main entry point"""
+        self._solve_started_at = time.monotonic()
         self._debug('solve start: test_initial_only={}'.format(test_initial_only))
         # assert we are starting fresh
         assert self._map.is_empty
@@ -150,6 +159,7 @@ class Solver:
         indicate_finish()
         indicate_final_counts(self._map.statistics)
         self._debug('solve complete')
+        self._solve_started_at = None
 
 
     # dfs

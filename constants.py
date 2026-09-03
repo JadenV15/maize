@@ -105,6 +105,8 @@ class TileType(_Enum):
 
 # ==== MAZE ====
 
+MAX_SOLVE_TIME = 180 # 180 seconds
+
 # TODO: revert to original
 NORMAL_TILE_COLOR = Color.WHITE
 NOGO_TILE_COLOR = Color.BLACK
