@@ -58,7 +58,7 @@ if __name__ == '__main__':
             print('Error:')
             print(e)
             indicate_fuck_up()
-            continue # try again, i guess?
+            raise
 
 
 

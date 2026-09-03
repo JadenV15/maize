@@ -37,9 +37,8 @@ def clear_color():
 
 
 def indicate_fuck_up():
-    """Indicate (with a bunch of flashing lights and sounds) that the robot has been FUBAR"""
+    """Indicate (with a bunch of flashing lights and sounds) that we are absolutely doomed"""
     print('something went wrong') # TODO
-    raise Exception
 
 
 def indicate_start():

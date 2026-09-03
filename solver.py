@@ -363,7 +363,7 @@ class Solver:
             if len(self._robot.touching_rel_directions) == 2:
                 return # extra distance probably unnecessary
 
-            if self._robot.is_touching_rel_direction(Direction.EAST):
+            elif self._robot.is_touching_rel_direction(Direction.EAST):
                 # don't use given speed here, as deltas are very small
                 self._robot.turn_by(small_angle, clockwise=False)
                 self._robot.drive(small_distance, forward=False)
