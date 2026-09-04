@@ -469,6 +469,10 @@ class Solver:
         else:
             self.horiz_calibrate(current_tile, global_direction)
 
+        # calibrate
+        self._robot.origin = current_tile.origin
+        self._robot.heading = int(global_direction)
+
 
     def horiz_calibrate(self, current_tile: Tile, global_direction: Direction):
         """Horizontally calibrate the robot. Robot origin must be at wall."""
@@ -572,10 +576,12 @@ class Solver:
                 self._robot.drive(abs(signed_distance_to_center), forward=signed_distance_to_center > 0)
 
                 self._robot.origin = current_tile.origin
+                self._robot.heading = int(global_direction)
                 self._debug('lateral calibration complete: offset={:.1f}mm'.format(offset))
         else:
             self._robot.drive(TILE_HALF_WIDTH, forward=False)
             self._robot.origin = current_tile.origin
+            self._robot.heading = int(global_direction)
             self._debug('lateral calibration skipped: no side wall')
             return
 
