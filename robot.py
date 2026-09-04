@@ -444,16 +444,16 @@ class Robot:
         if self._cs.reflected_light_intensity >= REFLECTED_LIGHT_THRESHOLD:
             result = TileType.START
         
-        elif col == NORMAL_TILE_COLOR:
+        elif col == Color.WHITE:
             result = TileType.NORMAL
         
-        elif col == NOGO_TILE_COLOR:
+        elif col == Color.BLACK:
             result = TileType.NOGO
         
-        elif col == UNHARMED_VICTIM_COLOR:
+        elif col in (Color.GREEN, Color.YELLOW): # for some reason, CS may mis-detect
             result = TileType.UNHARMED_VICTIM
         
-        elif col == HARMED_VICTIM_COLOR:
+        elif col == Color.RED:
             result = TileType.HARMED_VICTIM
         
         else:

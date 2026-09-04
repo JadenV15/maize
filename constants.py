@@ -107,12 +107,6 @@ class TileType(_Enum):
 
 MAX_SOLVE_TIME = 180 # 180 seconds
 
-# TODO: revert to original
-NORMAL_TILE_COLOR = Color.WHITE
-NOGO_TILE_COLOR = Color.BLACK
-HARMED_VICTIM_COLOR = Color.RED
-UNHARMED_VICTIM_COLOR = Color.GREEN
-
 # to calibrate
 
 TILE_WIDTH = 290 # +/- 15%
