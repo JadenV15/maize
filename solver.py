@@ -151,7 +151,7 @@ class Solver:
         wait()
 
         # finally, move back to the start tile and align against back wall
-        self._robot.drive(delta, forward=False)
+        self.drive_backward_until_not_moving()
 
         indicate_finish()
         indicate_final_counts(self._map.statistics)
@@ -437,45 +437,8 @@ class Solver:
             self._debug('backward wall approach complete after {} corrections'.format(corrections))
 
 
-    def wall_calibrate(self, current_tile: Tile, global_direction: Direction, horiz_calibrate: bool = False):
-        """Calibrate the robot against the wall. Robot origin must be at tile origin.
-        If horiz_calibrate specified, do horiz_calibrate on the way back to tile origin instead of a simple backwards movement.
-        """
-        self._debug('wall calibration start: tile={}, direction={}'.format(current_tile.map_point, global_direction))
-
-        # calibrate only if there is a wall
-        if self._map.get_wall_by_direction(current_tile, global_direction) is None:
-            self._robot.us_turn_to(Direction.NORTH)
-            if self._robot.is_open:
-                self._debug('advance calibration skipped: no front wall')
-                return
-
-        # here, we have confirmed there is a wall directly in front of the robot
-        # we can move forward and calibrate
-        wait()
-
-        # move forward until we hit the wall
-        self.drive_forward_until_not_moving()
-
-        # calibrate
-        self._robot.origin = shift(current_tile.origin, global_direction, TILE_HALF_WIDTH)
-        wait()
-
-        if not horiz_calibrate:
-            self._robot.drive(TILE_HALF_WIDTH, forward=False)
-            self._robot.origin = current_tile.origin
-            self._debug('advance calibration complete without horizontal calibration')
-
-        else:
-            self.horiz_calibrate(current_tile, global_direction)
-
-        # calibrate
-        self._robot.origin = current_tile.origin
-        self._robot.heading = int(global_direction)
-
-
-    def horiz_calibrate(self, current_tile: Tile, global_direction: Direction):
-        """Horizontally calibrate the robot. Robot origin must be at wall."""
+    def horiz_calibrate(self, current_tile: Tile, global_direction: Direction, facing_wall: bool = False):
+        """Horizontally calibrate the robot. Robot origin must be at wall. Origin ends at tile wall as well (purely left-right calibration)"""
         self._debug('horizontal calibration start: tile={}, direction={}'.format(current_tile.map_point, global_direction))
         r'''
         Either left/right wall is required to exist
@@ -535,51 +498,48 @@ class Solver:
         +----|-----|----+
         |    +-----+    |
         |               |
-        Then move back to centre:
+        Then move back to wall
         ...
         '''
         left = Direction(global_direction.rotate(Direction.WEST))
         right = Direction(global_direction.rotate(Direction.EAST))
 
+        touching_wall = self._map.get_wall_by_direction(current_tile, global_direction if facing_wall else global_direction.reverse())
+        has_touching_wall = touching_wall is not None
         has_left_wall = self._map.get_wall_by_direction(current_tile, left) is not None
         has_right_wall = self._map.get_wall_by_direction(current_tile, right) is not None
 
-        if has_left_wall or has_right_wall:
+        if has_touching_wall and (has_left_wall or has_right_wall):
             self._robot.us_turn_to(Direction.WEST if has_left_wall else Direction.EAST)
 
             signed_extra_distance_from_wall = self._robot.us_distance - EAST_WEST_WALL_US_DISTANCE
             offset = abs(signed_extra_distance_from_wall)
 
             if offset <= HORIZ_CALIBRATE_IGNORE_OFFSET:
-                # normal reverse
-                self._robot.drive(TILE_HALF_WIDTH, forward=False)
-                self._robot.origin = current_tile.origin
-                self._debug('lateral calibration ignored offset={:.1f}mm'.format(offset))
+                self._robot.origin = touching_wall.origin
+                self._robot.heading = int(global_direction)
+                self._debug('lateral calibration skipped: ignored offset={:.1f}mm'.format(offset))
 
             else:
                 is_too_close_to_wall = signed_extra_distance_from_wall < 0
-
-                self._robot.drive(HORIZ_CALIBRATE_BUFFER, forward=False)
+                self._robot.drive(HORIZ_CALIBRATE_BUFFER, forward=not facing_wall)
                 wait()
-                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=not is_too_close_to_wall)
+                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=not is_too_close_to_wall if facing_wall else is_too_close_to_wall)
                 distance = offset / math.sin(math.radians(HORIZ_CALIBRATE_DEGREES))
                 wait()
-                self._robot.drive(distance, forward=False)
+                self._robot.drive(distance, forward=not facing_wall)
                 wait()
-                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=is_too_close_to_wall)
+                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=is_too_close_to_wall if facing_wall else not is_too_close_to_wall)
                 wait()
-                signed_distance_to_center = signed_distance_to(
-                    self._robot.origin,
-                    current_tile.origin,
-                    global_direction
-                )
-                self._robot.drive(abs(signed_distance_to_center), forward=signed_distance_to_center > 0)
-
-                self._robot.origin = current_tile.origin
+                if facing_wall:
+                    self.drive_forward_until_not_moving()
+                else:
+                    self.drive_backward_until_not_moving()
+                wait()
+                self._robot.origin = touching_wall.origin
                 self._robot.heading = int(global_direction)
                 self._debug('lateral calibration complete: offset={:.1f}mm'.format(offset))
         else:
-            self._robot.drive(TILE_HALF_WIDTH, forward=False)
             self._robot.origin = current_tile.origin
             self._robot.heading = int(global_direction)
             self._debug('lateral calibration skipped: no side wall')
@@ -595,7 +555,7 @@ class Solver:
     # advance turns need horiz calibration, but not backtrack turns (to save time) - TODO
 
 
-    def advance(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = False):
+    def advance(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = False): # TODO enable horiz
         """Move forward.
         This is movement #1 in the doc.
         Raise black tile error and return to original position if black tile detected.
@@ -648,7 +608,20 @@ class Solver:
             # current_tile should have been created in dfs()
             assert current_tile is not None
 
-            self.wall_calibrate(current_tile, global_direction, horiz_calibrate)
+            # calibrate only if there is a wall
+            if self._map.get_wall_by_direction(current_tile, global_direction) is None:
+                self._robot.us_turn_to(Direction.NORTH)
+                if self._robot.is_open:
+                    self._debug('advance calibration skipped: no front wall')
+                    return
+
+            self.drive_forward_until_not_moving()
+
+            if horiz_calibrate:
+                self.horiz_calibrate(current_tile, global_direction)
+
+            self._robot.drive(TILE_HALF_WIDTH, forward=False)
+            self._robot.origin = current_tile.origin
 
         self._debug('advance complete')
 
@@ -859,7 +832,7 @@ class Solver:
             self._robot.drive(distance, forward=False)
 
 
-    def _turn_step_5(self, inverse=False, raise_if_nogo=True, wall_calibrate=True):
+    def _turn_step_5(self, inverse=False, raise_if_nogo=True, wall_calibrate=True, horiz_calibrate: bool = False):
         """
         5) Move forward to next tile's origin
         +----(0, 0)-----+----(1, 0)-----+
@@ -870,8 +843,8 @@ class Solver:
         |           → → |               |
         +---------------+---------------+
         """
-        self._debug('turn step 5: inverse={}, raise_if_nogo={}, wall_calibrate={}'.format(
-            inverse, raise_if_nogo, wall_calibrate
+        self._debug('turn step 5: inverse={}, raise_if_nogo={}, wall_calibrate={}, horiz_calibrate={}'.format(
+            inverse, raise_if_nogo, wall_calibrate, horiz_calibrate
         ))
         if not wall_calibrate:
             self._turn_step_5_no_calibrate(inverse, raise_if_nogo)
@@ -961,6 +934,9 @@ class Solver:
                 self.drive_backward_until_not_moving()
                 wait()
 
+                if horiz_calibrate:
+                    self.horiz_calibrate(current_tile, global_direction, facing_wall=False)
+
                 # move to the connection between the tiles
                 self._robot.drive(TILE_WIDTH - ROBOT_HEIGHT)
                 # calibrate
@@ -986,16 +962,20 @@ class Solver:
                 self.drive_backward_until_not_moving()
                 wait()
 
+                if horiz_calibrate:
+                    self.horiz_calibrate(current_tile, global_direction, facing_wall=False)
+
                 # move forward to initial
+                # TODO: adjust
                 self._robot.drive(STEP_5_DISTANCE - (ROBOT_HEIGHT - TILE_HALF_WIDTH))
 
 
-    def advance_right(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True):
+    def advance_right(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = False):
         """Move forward and to the right.
         This is movement #4 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
-        self._debug('advance right start: handle_nogo_tiles={}, calibrate={}'.format(handle_nogo_tiles, wall_calibrate))
+        self._debug('advance right start: handle_nogo_tiles={}, wall_calibrate={}, horiz_calibrate={}'.format(handle_nogo_tiles, wall_calibrate, horiz_calibrate))
         self._turn_step_1()
         wait()
         self._turn_step_2()
@@ -1019,7 +999,7 @@ class Solver:
             raise NogoTileError
 
         try:
-            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, wall_calibrate=wall_calibrate)
+            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, wall_calibrate=wall_calibrate, horiz_calibrate=horiz_calibrate)
         except NogoTileError:
             # we are back to previous position
             wait()
@@ -1035,12 +1015,12 @@ class Solver:
             raise # reraise
 
 
-    def advance_left(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True):
+    def advance_left(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = False):
         """Move forward and to the left.
         This is movement #3 in the doc.
         Raise black tile error and return to original position if black tile detected.
         """
-        self._debug('advance left start: handle_nogo_tiles={}, calibrate={}'.format(handle_nogo_tiles, wall_calibrate))
+        self._debug('advance left start: handle_nogo_tiles={}, wall_calibrate={}, horiz_calibrate={}'.format(handle_nogo_tiles, wall_calibrate, horiz_calibrate))
         # TODO: handle calibration
         self._turn_step_1()
         wait()
@@ -1063,7 +1043,7 @@ class Solver:
             raise NogoTileError
 
         try:
-            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, wall_calibrate=wall_calibrate)
+            self._turn_step_5(raise_if_nogo=handle_nogo_tiles, wall_calibrate=wall_calibrate, horiz_calibrate=horiz_calibrate)
         except NogoTileError:
             wait()
             indicate_nogo_tile()
@@ -1077,14 +1057,14 @@ class Solver:
             raise
 
 
-    def backtrack_right(self, wall_calibrate: bool = True):
+    def backtrack_right(self, wall_calibrate: bool = True, horiz_calibrate: bool = False):
         """Move backward and to the right.
         This is movement #6 in the doc.
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._debug('backtrack right start: calibrate={}'.format(wall_calibrate))
-        self._turn_step_5(inverse=True, raise_if_nogo=False, wall_calibrate=wall_calibrate)
+        self._debug('backtrack right start: wall_calibrate={}, horiz_calibrate={}'.format(wall_calibrate, horiz_calibrate))
+        self._turn_step_5(inverse=True, raise_if_nogo=False, wall_calibrate=wall_calibrate, horiz_calibrate=horiz_calibrate)
         wait()
         self._turn_step_4(inverse=True)
         wait()
@@ -1095,14 +1075,14 @@ class Solver:
         self._turn_step_1(inverse=True)
 
 
-    def backtrack_left(self, wall_calibrate: bool = True):
+    def backtrack_left(self, wall_calibrate: bool = True, horiz_calibrate: bool = False):
         """Move backward and to the left.
         This is movement #5 in the doc.
         NOTE: there is no need to worry about black tiles,
         because we assume all three tiles have already been explored
         """
-        self._debug('backtrack left start: calibrate={}'.format(wall_calibrate))
-        self._turn_step_5(inverse=True, raise_if_nogo=False, wall_calibrate=wall_calibrate)
+        self._debug('backtrack left start: wall_calibrate={}, horiz_calibrate={}'.format(wall_calibrate, horiz_calibrate))
+        self._turn_step_5(inverse=True, raise_if_nogo=False, wall_calibrate=wall_calibrate, horiz_calibrate=horiz_calibrate)
         wait()
         self._turn_step_4()
         wait()
