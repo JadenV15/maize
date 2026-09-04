@@ -450,7 +450,7 @@ class Robot:
         elif col == Color.BLACK:
             result = TileType.NOGO
         
-        elif col in (Color.GREEN, Color.YELLOW): # for some reason, CS may mis-detect
+        elif col == Color.GREEN:
             result = TileType.UNHARMED_VICTIM
         
         elif col == Color.RED:

@@ -285,13 +285,6 @@ class Solver:
                 continue
 
 
-    # movement
-    # each movement should assume the robot origin is EXACTLY
-    # on the current tile's origin
-    # and each movement should (try to) move the robot
-    # so that the origin is EXACTLY on the target tile's origin
-
-
     # robot utils
 
 
@@ -304,7 +297,7 @@ class Solver:
             return current_tile_type
 
         small_distance = 5 # mm # TODO: constant?
-        max_distance = 35 # max abs distance from initial origin
+        max_distance = 25 # max abs distance from initial origin
 
         abs_distance = 0 # total abs distance from initial origin
         initial_origin = self._robot.origin
@@ -417,10 +410,11 @@ class Solver:
             return
 
         # these are too unimportant to be constants (?)
-        small_angle = 3
+        small_angle = 5
         small_distance = 5 # mm
         max_corrections = 5
 
+        # no need for wait()
         corrections = 0
         while True:
             if corrections == max_corrections:
@@ -439,6 +433,7 @@ class Solver:
             elif self._robot.is_touching_rel_direction(Direction.WEST):
                 self._robot.turn_by(small_angle)
                 self._robot.drive(small_distance, forward=False)
+
             self._debug('backward wall approach complete after {} corrections'.format(corrections))
 
 
@@ -551,7 +546,7 @@ class Solver:
             signed_extra_distance_from_wall = self._robot.us_distance - EAST_WEST_WALL_US_DISTANCE
             offset = abs(signed_extra_distance_from_wall)
 
-            if offset <= ADVANCE_CALIBRATE_IGNORE_OFFSET:
+            if offset <= HORIZ_CALIBRATE_IGNORE_OFFSET:
                 # normal reverse
                 self._robot.drive(TILE_HALF_WIDTH, forward=False)
                 self._robot.origin = current_tile.origin
@@ -560,14 +555,14 @@ class Solver:
             else:
                 is_too_close_to_wall = signed_extra_distance_from_wall < 0
 
-                self._robot.drive(ADVANCE_CALIBRATE_BUFFER, forward=False)
+                self._robot.drive(HORIZ_CALIBRATE_BUFFER, forward=False)
                 wait()
-                self._robot.turn_by(ADVANCE_CALIBRATE_DEGREES, clockwise=not is_too_close_to_wall)
-                distance = offset / math.sin(math.radians(ADVANCE_CALIBRATE_DEGREES))
+                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=not is_too_close_to_wall)
+                distance = offset / math.sin(math.radians(HORIZ_CALIBRATE_DEGREES))
                 wait()
                 self._robot.drive(distance, forward=False)
                 wait()
-                self._robot.turn_by(ADVANCE_CALIBRATE_DEGREES, clockwise=is_too_close_to_wall)
+                self._robot.turn_by(HORIZ_CALIBRATE_DEGREES, clockwise=is_too_close_to_wall)
                 wait()
                 signed_distance_to_center = signed_distance_to(
                     self._robot.origin,
@@ -594,7 +589,7 @@ class Solver:
     # advance turns need horiz calibration, but not backtrack turns (to save time) - TODO
 
 
-    def advance(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = True):
+    def advance(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True, horiz_calibrate: bool = False):
         """Move forward.
         This is movement #1 in the doc.
         Raise black tile error and return to original position if black tile detected.
@@ -705,9 +700,9 @@ class Solver:
         """
         self._debug('turn step 1: inverse={}'.format(inverse))
         if not inverse:
-            self._robot.drive(TILE_HALF_WIDTH, forward=False)
+            self._robot.drive(STEP_1_DISTANCE, forward=False)
         else:
-            self._robot.drive(TILE_HALF_WIDTH)
+            self._robot.drive(STEP_1_DISTANCE)
 
 
     def _turn_step_2(self, inverse=False):
@@ -966,7 +961,7 @@ class Solver:
                 self._robot.origin = shift(current_tile.origin, global_direction, TILE_HALF_WIDTH)
 
                 # move remaining buffer distance
-                self._robot.drive(NOGO_DETECTION_BUFFER)
+                self._robot.drive(STEP_5_DISTANCE + STEP_5_A_DISTANCE - TILE_HALF_WIDTH)
 
                 if raise_if_nogo and self.get_smart_tile_type() == TileType.NOGO:
                     self._debug('NOGO detected during calibrated step 5')
@@ -986,8 +981,7 @@ class Solver:
                 wait()
 
                 # move forward to initial
-                distance = TILE_HALF_WIDTH - (ROBOT_HEIGHT - STEP_5_DISTANCE)
-                self._robot.drive(distance)
+                self._robot.drive(STEP_5_DISTANCE - (ROBOT_HEIGHT - TILE_HALF_WIDTH))
 
 
     def advance_right(self, handle_nogo_tiles: bool = True, wall_calibrate: bool = True):
