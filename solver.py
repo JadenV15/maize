@@ -1000,7 +1000,7 @@ class Solver:
         self._turn_step_4()
         wait()
 
-        if handle_nogo_tiles and self._robot.tile_type == TileType.NOGO: # no need for smart()
+        if handle_nogo_tiles and self.get_smart_tile_type() == TileType.NOGO: # no need for smart()
             indicate_nogo_tile()
             # do everything backwards to return to initial position
             self._turn_step_4(inverse=True)
@@ -1045,7 +1045,7 @@ class Solver:
         self._turn_step_4(inverse=True)
         wait()
 
-        if handle_nogo_tiles and self._robot.tile_type == TileType.NOGO:
+        if handle_nogo_tiles and self.get_smart_tile_type() == TileType.NOGO:
             indicate_nogo_tile()
             self._turn_step_4()
             wait()

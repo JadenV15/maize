@@ -6,7 +6,7 @@ import time
 from shapely.geometry import Point
 
 from constants import *
-from button import backspace_pressed
+from button import enter_pressed
 
 __all__ = [
     'wait',
@@ -20,7 +20,7 @@ def wait(time_ms: Numeric = WAIT_TIME_MS, check_pressed: bool = True):
     """Sleep a short amount of time between movements, to prevent jamming. Also check if exit requested (via button press)"""
     time.sleep(time_ms / 1000)
 
-    if check_pressed and backspace_pressed():
+    if check_pressed and enter_pressed():
         raise ExitRequestedError
 
 

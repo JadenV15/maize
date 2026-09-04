@@ -39,6 +39,7 @@ def clear_color():
 def indicate_fuck_up():
     """Indicate (with a bunch of flashing lights and sounds) that we are absolutely doomed"""
     print('something went wrong') # TODO
+    start_beep()
 
 
 def indicate_start():

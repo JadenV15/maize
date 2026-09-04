@@ -51,14 +51,15 @@ if __name__ == '__main__':
 
         except ExitRequestedError:
             print('Stopped')
-            reset_backspace()
+            reset_enter()
             continue # wait for Robot Handler to press enter again to restart
 
         except Exception as e:
             print('Error:')
             print(e)
             indicate_fuck_up()
-            raise
+            reset_enter()
+            continue
 
 
 
