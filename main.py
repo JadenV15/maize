@@ -44,6 +44,7 @@ if __name__ == '__main__':
     while True:
         print('Waiting for signal...')
         wait_for_enter_press()
+        reset_enter()
 
         print('Started')
         try:

@@ -437,7 +437,7 @@ class Solver:
             self._debug('backward wall approach complete after {} corrections'.format(corrections))
 
 
-    def horiz_calibrate(self, current_tile: Tile, global_direction: Direction, facing_wall: bool = False):
+    def horiz_calibrate(self, current_tile: Tile, global_direction: Direction, facing_wall: bool = True):
         """Horizontally calibrate the robot. Robot origin must be at wall. Origin ends at tile wall as well (purely left-right calibration)"""
         self._debug('horizontal calibration start: tile={}, direction={}'.format(current_tile.map_point, global_direction))
         r'''
