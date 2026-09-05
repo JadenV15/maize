@@ -186,7 +186,7 @@ class Solver:
         # since the robot is at the centre of  `tile`,
         # we take a reading of the tile type
         # and assign it to the tile
-        tile_type = self.get_smart_tile_type() # use smart
+        tile_type = self.get_smart_victim_tile_type() # use smart
         assert tile_type not in (TileType.START, TileType.NOGO)
         tile.tile_type = tile_type
         self._debug('tile {} type={}'.format(tile.map_point, tile_type))
@@ -297,7 +297,7 @@ class Solver:
             return current_tile_type
 
         small_distance = 5 # mm # TODO: constant?
-        max_distance = 25 # max abs distance from initial origin
+        max_distance = 15 # max abs distance from initial origin
 
         abs_distance = 0 # total abs distance from initial origin
         initial_origin = self._robot.origin
@@ -324,9 +324,8 @@ class Solver:
                         current_tile_type = self._robot.tile_type
                         if current_tile_type is not None:
                             return current_tile_type
-
                         else:
-                            return TileType.NORMAL # pretend its normal
+                            return TileType.NORMAL
                         
                     self._robot.drive(small_distance)
                     abs_distance += small_distance
@@ -343,6 +342,65 @@ class Solver:
 
             current_tile_type = self._robot.tile_type
             if current_tile_type is not None:
+                wait()
+                self._robot.drive(abs_distance)
+                # calibrate
+                self._robot.origin = initial_origin
+                return current_tile_type
+
+
+    def get_smart_victim_tile_type(self) -> TileType:
+        current_tile_type = self._robot.tile_type
+        if current_tile_type not in (TileType.NORMAL, None):
+            return current_tile_type
+
+        small_distance = 5 # mm # TODO: constant?
+        max_distance = 15 # max abs distance from initial origin
+
+        abs_distance = 0 # total abs distance from initial origin
+        initial_origin = self._robot.origin
+
+        while True:
+            if abs_distance + small_distance >= max_distance:
+                # driving back again would exceed max
+                # try again, but moving forward
+
+                # first move back to origin
+                self._robot.drive(abs_distance)
+                self._robot.origin = initial_origin
+                # try again at origin just for luck
+                current_tile_type = self._robot.tile_type
+                if current_tile_type not in (TileType.NORMAL, None):
+                    return current_tile_type
+                
+                abs_distance = 0
+                while True:
+                    if abs_distance + small_distance >= max_distance:
+                        self._robot.drive(abs_distance, forward=False)
+                        self._robot.origin = initial_origin
+                        # one final try just for luck
+                        current_tile_type = self._robot.tile_type
+                        if current_tile_type not in (TileType.NORMAL, None):
+                            return current_tile_type
+
+                        else:
+                            return current_tile_type if current_tile_type is not None else TileType.NORMAL # pretend its normal
+                        
+                    self._robot.drive(small_distance)
+                    abs_distance += small_distance
+
+                    current_tile_type = self._robot.tile_type
+                    if current_tile_type not in (TileType.NORMAL, None):
+                        wait()
+                        self._robot.drive(abs_distance, forward=False)
+                        self._robot.origin = initial_origin
+                        return current_tile_type
+            
+            self._robot.drive(small_distance, forward=False)
+            abs_distance += small_distance
+
+            current_tile_type = self._robot.tile_type
+            if current_tile_type not in (TileType.NORMAL, None):
                 wait()
                 self._robot.drive(abs_distance)
                 # calibrate
